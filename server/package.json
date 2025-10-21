@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc index.ts",
-    "build:front" : "cd ../client && pnpm build && cd ../server",
+    "build:front" : "cd ../client && pnpm install && pnpm build && cd ../server",
     "start": "pnpm build:front && node index.js"
   },
   "keywords": [],
