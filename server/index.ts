@@ -1,4 +1,4 @@
-import express from 'express';
+import * as express from 'express';
 const path = require('path');
 
 const app = express();
@@ -12,7 +12,7 @@ app.get('/users', (req, res)=>{
 
 // Determinamos la ruta absoluta a la carpeta 'dist' del frontend
 // __dirname es 'desafio-integrador-4/server'. Subimos (..) y entramos a 'client/dist'
-const staticPath = path.join(__dirname, '..', '..', 'client', 'dist');
+const staticPath = path.join(__dirname, '..', 'client', 'dist');
 
 // Usamos express.static para servir la carpeta compilada
 app.use(express.static(staticPath));
