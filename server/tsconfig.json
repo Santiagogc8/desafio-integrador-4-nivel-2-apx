@@ -1,8 +1,10 @@
 {
     "compilerOptions": {
-        "moduleResolution": "node",
-        "target": "esnext",
-        "module": "commonjs",
-        "esModuleInterop": true
-    }
+        "target": "esnext",         
+        "module": "commonjs",       
+        "esModuleInterop": true,    
+        "moduleResolution": "node"        
+    },
+    "include": ["./**/*.ts"],     
+    "exclude": ["node_modules"]   
 }
