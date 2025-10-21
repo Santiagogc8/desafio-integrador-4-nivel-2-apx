@@ -1,0 +1,8 @@
+.DS_Store
+node_modules
+response
+build
+.vscode
+dist
+.parcel-cache
+key.json
