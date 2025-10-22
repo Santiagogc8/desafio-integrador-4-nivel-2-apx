@@ -1,6 +1,6 @@
 import express from 'express'; // Hacemos la importacion de express
 const path = require('path'); // Importacion de path (para rutas relativas y el staticServer)
-import { firestore, rtdb } from './database'; // Firestore y rtdb para obtener las databases
+import { firestore, rtdb, FieldValue } from './database'; // Firestore y rtdb para obtener las databases
 import { v4 as uuidv4 } from 'uuid'; // v4 de uuid para obtener ids alfanumericos aleatorios
 import cors from 'cors'; // Cors para conexiones mas sencillas
 import { nanoid } from 'nanoid'; // E importamos nanoid para crear keys aleatorios a las referencias de la rtdb
@@ -79,7 +79,7 @@ app.post('/rooms', async (req, res)=>{
             roundStatus: "waiting player 2", // Un estado de ronda por defecto
             player1: {
                 userId,
-                selection: null
+                choice: null
             }, // El player1 con un objeto que tiene su id y una seleccion nula
             player2: null // Y el player2 en null
         })
@@ -133,22 +133,103 @@ app.patch('/rooms/:roomId', async (req, res)=>{
                     newRtdbRoomRef.update({ // Y le hace un update
                         player2: {
                             userId,
-                            selection: null
+                            choice: null
                         },
                         roundStatus: "waiting selections"
                     })
-                    res.status(200).json({message: "updated"}) // Y envia una respuesta con estado 200
+                    res.status(200).json({message: "updated"}); // Y envia una respuesta con estado 200
                 } else { // En caso de que player2 exista en la referencia de la rtdb (esta llena la sala)
-                    res.status(403).json({error: 'the room is full'}) // Envia un estado 403 y yun mensaje
+                    res.status(403).json({error: 'the room is full'}); // Envia un estado 403 y yun mensaje
                 }
             } else { // En caso de que la referencia de la rtdb no exista
-                res.status(404).json({error: 'room not found'}) // Enviamos un 404
+                res.status(404).json({error: 'room not found'}); // Enviamos un 404
             }
         } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
-            res.status(404).json({error: 'room not found'}) // Enviamos un 404
+            res.status(404).json({error: 'room not found'}); // Enviamos un 404
         }
     } else{
-        res.status(401).json({error: 'you are not authorized'}) // Enviamos un estado 401 que envia un mensaje de unauthorized
+        res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
+    }
+});
+
+// Establecer plays
+// En este endpoint necesitamos actualizar las selecciones de los jugadores en la rtdb
+app.patch('/rooms/:roomId/play', async (req, res) =>{
+    const {userId, choice} = req.body; // Obtenemos el userId y la seleccion del usuario del body
+    const {roomId} = req.params; // Y obtenemos el roomId de los parametros
+
+    if(!userId) res.status(400).json({error: "a username was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
+
+    const searchUser = await usersCollection.doc(userId).get(); // Buscamos al usuario en la userCollection y le hacemos un get
+
+    if(searchUser.exists){ // Si el usuario existe en la usersCollection
+        const searchShortRoom = await roomsCollection.doc(roomId).get(); // Hace una busqueda de la coleccion de rooms con el roomId recibido y la obtiene
+
+        if(searchShortRoom.exists){ // En caso de que la room con el id corto exista
+            const rtdbRoomId = searchShortRoom.data().rtdbRoomId; // Obtiene el room de la rtdb de sus propiedades
+            const rtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId).get(); // E intenta obtener la ref de la rtdb en la ruta que le pasamos
+            const roomData = rtdbRoomRef.val(); // Guardamos la data de la room en la rtdb
+
+            if(roomData.roundStatus !== "waiting selections"){ // Validamos si el roundStatus es diferente a wating selections
+                res.status(400).json("you cannot make moves yet"); // En caso afirmativo, enviamos un error 400
+                return; // Y terminamos la funcion
+            }
+
+            if(roomData.player1.userId === userId){ // Validamos si la propiedad userId del player1 en la rtdb es igual al que nos pasaron
+                const player1Ref = await rtdb.ref('/rooms/'+rtdbRoomId+'/player1'); // En caso afirmativo obtenemos la referencia del player 1
+
+                player1Ref.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
+            } 
+            else if(roomData.player2.userId === userId){ // Validamos si la propiedad userId del player2 en la rtdb es igual al que nos pasaron
+                const newRtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId+'/player2'); // En caso afirmativo obtenemos la referencia del player 2
+
+                newRtdbRoomRef.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
+            } 
+            else { // En caso de que ningun userId sea el que recibimos
+                res.status(400).json({error: "userId not valid"}); // enviamos un error
+            }
+
+            const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val(); // Obtenemos la data actualizada del roomRef y accedemos a su valor
+
+            // Sobre la data de la room actualizada, entramos a la propiedad choice de cada player y validamos que no sea null (para que podamos establecer los resultados)
+            if(updatedRoomData.player1.choice !== null && updatedRoomData.player2.choice !== null){
+                const rulesMap = { // Establecemos las reglas del juego
+                    piedra: "tijeras", // La piedra le gana a las tijeras
+                    papel: "piedra", // El papel a la piedra
+                    tijeras: "papel" // Y las tijeras al papel
+                }
+
+                const player1Choice = updatedRoomData.player1.choice;
+                const player2Choice = updatedRoomData.player2.choice;
+                let winner: string;
+
+                if(rulesMap[player1Choice] === player2Choice) winner = "player1";
+
+                if(rulesMap[player2Choice] === player1Choice) winner = "player2";
+
+                winner = "tie";
+
+                await rtdb.ref('/rooms/'+rtdbRoomId).update({
+                    roundStatus: "results",
+                    winner
+                })
+
+                const historyEntry = {
+                    player1Choice,
+                    player2Choice,
+                    winner,
+                    date: new Date()
+                }
+
+                await roomsCollection.doc(roomId).update({
+                    history: FieldValue.arrayUnion(historyEntry)
+                })
+            }
+        } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
+            res.status(404).json({error: 'room not found'}); // Enviamos un 404
+        }
+    } else{
+        res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
     }
 })
 
