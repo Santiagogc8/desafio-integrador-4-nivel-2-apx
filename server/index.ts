@@ -107,6 +107,45 @@ app.post('/rooms', async (req, res)=>{
     }
 })
 
+// Entrar a una sala
+// Debemos crear un endpoint que permita modificar el player2 de la database y algunas otras cosas. Lo hacemos en /rooms/:roomId
+app.patch('/rooms/:roomId', async (req, res)=>{
+    const {userId} = req.body; // Obtenemos el userId del body
+    const {roomId} = req.params; // Y obtenemos el roomId de los params
+
+    if(!userId) res.status(400).json({error: "a username was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
+
+    const searchUser = await usersCollection.doc(userId).get(); // Buscamos al usuario en la userCollection y le hacemos un get
+
+    if(searchUser.exists){ // Si el usuario existe en la usersCollection
+        const searchShortRoom = await roomsCollection.doc(roomId).get(); // Hace una busqueda de la coleccion de rooms con el roomId recibido y la obtiene
+
+        if(searchShortRoom.exists){ // En caso de que la room con el id corto exista
+            const rtdbRoomId = searchShortRoom.data().rtdbRoomId; // Obtiene el room de la rtdb de sus propiedades
+            const rtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId).get(); // E intenta obtener la ref de la rtdb en la ruta que le pasamos
+
+            if(rtdbRoomRef.exists){ // Si la referencia de la rtdb existe
+                if(!rtdbRoomRef.val().player2){ // Valida si NO tiene un valor player2 (o sea, que esta vacia)
+                    const newRtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId) // Crea una nueva referencia de la rtdb
+                    newRtdbRoomRef.update({ // Y le hace un update
+                        player2: userId,
+                        roundStatus: "waiting selections"
+                    })
+                    res.status(200).json({message: "updated"}) // Y envia una respuesta con estado 200
+                } else { // En caso de que player2 exista en la referencia de la rtdb (esta llena la sala)
+                    res.status(403).json({error: 'the room is full'}) // Envia un estado 403 y yun mensaje
+                }
+            } else { // En caso de que la referencia de la rtdb no exista
+                res.status(404).json({error: 'room not found'}) // Enviamos un 404
+            }
+        } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
+            res.status(404).json({error: 'room not found'}) // Enviamos un 404
+        }
+    } else{
+        res.status(401).json({error: 'you are not authorized'}) // Enviamos un estado 401 que envia un mensaje de unauthorized
+    }
+})
+
 // Determinamos la ruta absoluta a la carpeta 'dist' del frontend
 // __dirname es 'desafio-integrador-4/server'. Subimos (..) y entramos a 'client/dist'
 const staticPath = path.join(__dirname, '..', 'client', 'dist');
