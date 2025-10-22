@@ -77,7 +77,10 @@ app.post('/rooms', async (req, res)=>{
         rtdbRoomRef.set({ // Seteamos la referencia de la rtdb con
             owner: userId, // El owner como propiedad y el userId como valor
             roundStatus: "waiting player 2", // Un estado de ronda por defecto
-            player1: userId, // El player1 con el userId como valor
+            player1: {
+                userId,
+                selection: null
+            }, // El player1 con un objeto que tiene su id y una seleccion nula
             player2: null // Y el player2 en null
         })
 
@@ -128,7 +131,10 @@ app.patch('/rooms/:roomId', async (req, res)=>{
                 if(!rtdbRoomRef.val().player2){ // Valida si NO tiene un valor player2 (o sea, que esta vacia)
                     const newRtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId) // Crea una nueva referencia de la rtdb
                     newRtdbRoomRef.update({ // Y le hace un update
-                        player2: userId,
+                        player2: {
+                            userId,
+                            selection: null
+                        },
                         roundStatus: "waiting selections"
                     })
                     res.status(200).json({message: "updated"}) // Y envia una respuesta con estado 200
