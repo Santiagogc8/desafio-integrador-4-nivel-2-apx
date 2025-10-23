@@ -2,9 +2,9 @@
 /// <reference path="./types.d.ts" />
 
 // De esta manera, los import funcionan correctamente
-import scissorsUrl from '../img/tijera.svg';
-import rockUrl from '../img/piedra.svg';
-import paperUrl from '../img/papel.svg';
+import scissorsUrl from 'url:../img/tijera.svg';
+import rockUrl from 'url:../img/piedra.svg';
+import paperUrl from 'url:../img/papel.svg';
 
 class SelectionEl extends HTMLElement{ // Creamos el custom element que extiende de HTMLElement
     shadow: ShadowRoot; // Establecemos shadow de tipo ShadowRoot
@@ -34,7 +34,6 @@ class SelectionEl extends HTMLElement{ // Creamos el custom element que extiende
 
         const imageUrl = imageMap[imageAttribute!]; // Y establecemos como imageUrl el valor de la imagen con propiedad imageAttribute (piedra, papel o tijeras)
 
-        console.log(rockUrl)
         if(imageUrl){ // Si imageUrl no es null
             image.src = imageUrl; // Le establecemos como src la url
             image.classList.add(imageAttribute!); // Y le agregamos el atributo como clase

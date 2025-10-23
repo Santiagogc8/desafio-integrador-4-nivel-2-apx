@@ -1,6 +1,6 @@
 import { Router } from "@vaadin/router";
 
-class HomePage extends HTMLElement{
+class NewGame extends HTMLElement{
     shadow: ShadowRoot;
     constructor(){
         super();
@@ -16,8 +16,11 @@ class HomePage extends HTMLElement{
         container.classList.add('welcome__container')
 
         container.innerHTML = `
-            <h1>Piedra Papel <span>ó</span> Tijera</h1>
-            <button-el></button-el>
+            <h2>Quieres crear una nueva room o entrar a una room existente?</h2>
+            <div class="buttons__container">
+                <button-el>Room nueva</button-el>
+                <button-el>Room existente</button-el>
+            </div>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
@@ -41,9 +44,9 @@ class HomePage extends HTMLElement{
                 padding-bottom: 20px;
             }
 
-            h1{
+            h2{
                 color: #009048;
-                font-size: 80px;
+                font-size: 50px;
                 width: 284px;
                 margin: 0;
                 margin-bottom: 26px;
@@ -53,8 +56,14 @@ class HomePage extends HTMLElement{
                 color: #91CCAF;
             }
 
-            button-el{
+            .buttons__container{
+                display: flex;
+                gap: 10px;
                 width: 100%;
+            }
+
+            .buttons__container button-el{
+                flex: 1;
             }
 
             .selection__container{
@@ -84,4 +93,4 @@ class HomePage extends HTMLElement{
     }
 }
 
-customElements.define('home-page', HomePage)
+customElements.define('new-game', NewGame)

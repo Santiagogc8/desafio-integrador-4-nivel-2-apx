@@ -1,0 +1,39 @@
+:root{
+    --dark-btn-blue: #001997;
+    --light-btn-blue: #006CFC;
+    --light-btn-font: #D8FCFC;
+    --star-green: #6CB46C;
+    --star-red: #DC5B49;
+    --star-yellow: #E3DB00;
+    --win-bg: #4e8949b3;
+    --loose-bg: #894949E5;
+    --draw-bg: #9d9800bd;
+}
+
+#root{
+    position: relative;
+    z-index: 1;
+    overflow-y: hidden;
+    height: 100vh;
+}
+
+#root::before{
+    content: '';
+    inset: 0;
+    position: absolute;
+    background: url(https://thumbs.dreamstime.com/b/modelo-del-piedra-papel-o-tijera-juego-de-los-ni%C3%B1os-134992609.jpg);
+    z-index: -1;
+    opacity: 0.15;
+}
+
+@media (max-width: 350px) {
+    #root{
+        display: none;
+    }
+}
+
+@media (max-height: 600px) {
+    #root{
+        display: none;
+    }
+}

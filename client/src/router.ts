@@ -2,6 +2,6 @@ import {Router} from '@vaadin/router'; // Usamos vaadin router para evitar crear
 
 const router = new Router(document.getElementById('root'));
 router.setRoutes([
-    {path: '/', component: 'x-home-view'},
-    {path: '/users', component: 'x-user-list'}
+    {path: '/', component: 'home-page'},
+    {path: '/new-game', component: 'new-game'}
 ]);
