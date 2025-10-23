@@ -13,5 +13,9 @@
   "packageManager": "pnpm@10.18.0",
   "devDependencies": {
     "parcel": "^2.16.0"
+  },
+  "dependencies": {
+    "@vaadin/router": "^2.0.0",
+    "firebase": "^12.4.0"
   }
 }
