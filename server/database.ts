@@ -24,6 +24,6 @@ admin.initializeApp({ // Inicializamos la app con el metodo initializeApp de adm
 const firestore = admin.firestore();
 const rtdb = admin.database();
 
-const FieldValue = admin.firestore.FieldValue;
+const FieldValue = admin.firestore.FieldValue; // Creamos una variable fieldValue que contendra a FieldValue de firestore
 
 export { firestore, rtdb, FieldValue }; // Exportamos las funciones de firestore-admin

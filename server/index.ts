@@ -199,30 +199,40 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                     tijeras: "papel" // Y las tijeras al papel
                 }
 
-                const player1Choice = updatedRoomData.player1.choice;
-                const player2Choice = updatedRoomData.player2.choice;
-                let winner: string;
+                const player1Choice = updatedRoomData.player1.choice; // Guardamos la seleccion del player1
+                const player2Choice = updatedRoomData.player2.choice; // y la seleccion del player2
+                let winner = "tie"; // Y declaramos una variable winner que inicializamos en "tie" y cambiara dependiendo del resultado
 
-                if(rulesMap[player1Choice] === player2Choice) winner = "player1";
+                // La logica utilizada por el lado de escoger al ganador fue la siguiente:
+                // Lo mas "seguro" para evitar trampas es directamente hacer el resultado desde el back
 
-                if(rulesMap[player2Choice] === player1Choice) winner = "player2";
+                if(rulesMap[player1Choice] === player2Choice) winner = "player1"; // Entonces primero validamos si lo que selecciono el player1 en el mapa, es igual a lo que contiene el player2 en su seleccion. De ser asi, significa que el player1 gano. Por lo que cambiamos la variable winner
 
-                winner = "tie";
+                if(rulesMap[player2Choice] === player1Choice) winner = "player2"; // en caso de que lo que escogio el player2 sea igual en el mapa a lo que escogio el player1, gana player2 y cambiamos la variable winner
 
-                await rtdb.ref('/rooms/'+rtdbRoomId).update({
-                    roundStatus: "results",
-                    winner
-                })
-
-                const historyEntry = {
+                const historyEntry = { // Creamos un entry
                     player1Choice,
                     player2Choice,
                     winner,
-                    date: new Date()
+                    date: Date.now()
                 }
 
-                await roomsCollection.doc(roomId).update({
-                    history: FieldValue.arrayUnion(historyEntry)
+                await roomsCollection.doc(roomId).update({ // Y en la roomCollection obtenemos el documento con el roomId y le hacemos un update
+                    history: FieldValue.arrayUnion(historyEntry) // Le pasamos al history el arrayUnion con el historyEntry (es decir, hacemos un "push", con un metodo que ofrece firestore para no sustituir todo el array)
+                })
+
+                await rtdb.ref('/rooms/'+rtdbRoomId).update({
+                    roundStatus: 'waiting selections', // Cambia el estado para que puedan volver a jugar
+                    // Reiniciamos la selección de los jugadores a null
+                    'player1/choice': null, // Usa la notación de ruta anidada
+                    'player2/choice': null,
+                    winner: null // Limpiamos el campo 'winner' que no es necesario
+                });
+
+                res.json({winner: historyEntry.winner})
+            } else { // Si solo un jugador ha jugado
+                res.status(200).json({ // Envia un estado 200 y un mensaje
+                    message: "play recorded, waiting for the opponent..."
                 })
             }
         } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
@@ -231,7 +241,7 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
     } else{
         res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
     }
-})
+});
 
 // Determinamos la ruta absoluta a la carpeta 'dist' del frontend
 // __dirname es 'desafio-integrador-4/server'. Subimos (..) y entramos a 'client/dist'
