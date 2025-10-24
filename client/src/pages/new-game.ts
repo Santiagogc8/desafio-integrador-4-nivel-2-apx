@@ -79,11 +79,6 @@ class NewGame extends HTMLElement{
             }
         `
 
-        const button = container.querySelector('button-el');
-        button?.addEventListener('click', ()=>{
-            Router.go('/new-game')
-        });
-
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
     }

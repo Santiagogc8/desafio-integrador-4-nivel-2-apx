@@ -4,5 +4,6 @@ const router = new Router(document.getElementById('root'));
 router.setRoutes([
     {path: '/', component: 'home-page'},
     {path: '/login', component: 'login-page'},
-    {path: '/game', component: 'new-game'}
+    {path: '/game', component: 'new-game'},
+    {path: '/room/:roomId', component: 'game-room'},
 ]);
