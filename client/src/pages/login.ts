@@ -1,4 +1,5 @@
 import { Router } from "@vaadin/router";
+import { state } from "../state";
 
 class LoginPage extends HTMLElement{
     shadow: ShadowRoot;
@@ -116,7 +117,6 @@ class LoginPage extends HTMLElement{
         const input = form?.querySelector('input') as HTMLInputElement;
         const button = form?.querySelector('button');
         button?.classList.add('disabled');
-        
 
         // Escuchar cambios en el input
         input?.addEventListener('input', () => {
@@ -129,11 +129,14 @@ class LoginPage extends HTMLElement{
                 button!.disabled = true;
                 button?.classList.add('disabled');
             }
+            
+            
         });
 
         form?.addEventListener('submit', (e)=>{
             e.preventDefault();
-            Router.go('/game')
+            state.registerPlayer(input.value)
+            Router.go('/game');
         })
 
         this.shadow.appendChild(container);

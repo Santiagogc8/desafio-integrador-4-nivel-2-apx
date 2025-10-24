@@ -1,5 +1,7 @@
 import { rtdb, ref, onValue } from './rtdb';
 
+const API_BASE_URL = "http://localhost:3000";
+
 const state = { // Creamos nuestro state
     data: { // Creamos un data que guardara los elementos en un objeto
         history: [] as any[], // Que dentro tendra un array de plays
@@ -48,6 +50,31 @@ const state = { // Creamos nuestro state
     }, 
     setLocalStorage(info: any){
         localStorage.setItem('state', JSON.stringify(info))
+    },
+    async registerPlayer(username: string): Promise<string | null>{
+        const res = await fetch(API_BASE_URL + '/signup', { // Creamos nuestra llamada a la API con la url adicionando 'signup'
+            method: 'POST', // Le pasamos el metodo POST
+            headers: { 'Content-Type': 'application/json' }, // Pasamos los headers
+            body: JSON.stringify({
+                username
+            })
+        });
+
+        if(res.ok){
+            const newUser = await res.json();
+            
+
+            console.log(newUser)
+            return newUser
+        } else{
+            if(res.status === 400){
+                return await res.json()
+            }
+
+            return null;
+        }
+
+
     }
 }
 
