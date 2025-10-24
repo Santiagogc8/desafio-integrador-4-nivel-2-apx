@@ -23,7 +23,7 @@ class ButtonEl extends HTMLElement{ // Creamos la clase ButtonEl que extiende a 
                 font-family: 'Odibee Sans', sans-serif;
                 width: 100%;
                 height: 87px;
-                font-size: 15cqw;
+                font-size: 10cqw;
                 border: 10px solid var(--dark-btn-blue);
                 border-radius: 10px;
                 color: var(--light-btn-font);

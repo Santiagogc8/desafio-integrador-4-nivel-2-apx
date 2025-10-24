@@ -46,14 +46,10 @@ class NewGame extends HTMLElement{
 
             h2{
                 color: #009048;
-                font-size: 50px;
+                font-size: min(10vw, 40px);
                 width: 284px;
                 margin: 0;
                 margin-bottom: 26px;
-            }
-
-            span{
-                color: #91CCAF;
             }
 
             .buttons__container{

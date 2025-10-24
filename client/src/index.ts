@@ -2,6 +2,7 @@ import './router'
 
 // Pages
 import './pages/home';
+import './pages/login'
 import './pages/new-game'
 
 // Components

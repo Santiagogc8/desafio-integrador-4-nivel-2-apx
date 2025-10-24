@@ -43,7 +43,7 @@ class HomePage extends HTMLElement{
 
             h1{
                 color: #009048;
-                font-size: 80px;
+                font-size: min(20vw, 70px);
                 width: 284px;
                 margin: 0;
                 margin-bottom: 26px;
@@ -55,6 +55,7 @@ class HomePage extends HTMLElement{
 
             button-el{
                 width: 100%;
+                margin-bottom: 40px;
             }
 
             .selection__container{
@@ -76,7 +77,7 @@ class HomePage extends HTMLElement{
 
         const button = container.querySelector('button-el');
         button?.addEventListener('click', ()=>{
-            Router.go('/new-game')
+            Router.go('/login')
         });
 
         this.shadow.appendChild(container);
