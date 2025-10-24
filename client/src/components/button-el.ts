@@ -16,11 +16,10 @@ class ButtonEl extends HTMLElement{ // Creamos la clase ButtonEl que extiende a 
 
         style.innerHTML = `
             :host {
-                container-type: inline-size; /* Establishes containment context */
+                container-type: inline-size;
             }
 
             button{
-                font-family: 'Odibee Sans', sans-serif;
                 width: 100%;
                 height: 87px;
                 font-size: 10cqw;
@@ -28,10 +27,7 @@ class ButtonEl extends HTMLElement{ // Creamos la clase ButtonEl que extiende a 
                 border-radius: 10px;
                 color: var(--light-btn-font);
                 background-color: var(--light-btn-blue);
-            }
-
-            button:hover{
-                cursor: pointer;
+                font-family: "Cabin", sans-serif;
             }
         `
 

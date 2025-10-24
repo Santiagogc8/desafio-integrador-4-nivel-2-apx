@@ -17,8 +17,10 @@ class LoginPage extends HTMLElement{
 
         container.innerHTML = `
             <h2>Ingresa un nombre de usuario</h2>
-            <input placeholder="Username">
-            <button-el>Continuar</button-el>
+            <form>
+                <input placeholder="Username" id="username" autocomplete="off" required>
+                <button type="submit" disabled>Continuar</button>
+            </form>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
@@ -40,6 +42,7 @@ class LoginPage extends HTMLElement{
                 margin: 0 auto;
                 position: relative;
                 padding-bottom: 20px;
+                font-family: "Cabin", sans-serif;
             }
 
             h2{
@@ -50,17 +53,46 @@ class LoginPage extends HTMLElement{
                 margin-bottom: 26px;
             }
 
-            input{
+            form{
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            #username{
                 width: 85%;
                 box-sizing: border-box;
                 padding: 10px;
                 margin-bottom: 15px;
                 font-size: 20px;
-                border-radius: 5px;
+                border-radius: 10px;
+                font-family: "Cabin", sans-serif;
+                border: 2px solid black;
             }
 
-            button-el{
+            button{
                 width: 85%;
+                height: 87px;
+                border: 10px solid var(--dark-btn-blue);
+                border-radius: 10px;
+                color: var(--light-btn-font);
+                background-color: var(--light-btn-blue);
+                font-family: "Cabin", sans-serif;
+                font-size: 30px;
+            }
+
+            button:hover{
+                cursor: pointer;
+            }
+
+            button.disabled{
+                opacity: 50%;
+            }
+
+            button.disabled:hover{
+                cursor: not-allowed;
             }
 
             .selection__container{
@@ -80,10 +112,29 @@ class LoginPage extends HTMLElement{
             }
         `
 
-        const button = container.querySelector('button-el');
-        button?.addEventListener('click', ()=>{
-            Router.go('/game')
+        const form = container.querySelector('form');
+        const input = form?.querySelector('input') as HTMLInputElement;
+        const button = form?.querySelector('button');
+        button?.classList.add('disabled');
+        
+
+        // Escuchar cambios en el input
+        input?.addEventListener('input', () => {
+            const hasText = input.value.trim().length > 0;
+            
+            if (hasText) {
+                button!.disabled = false;
+                button?.classList.remove('disabled');
+            } else {
+                button!.disabled = true;
+                button?.classList.add('disabled');
+            }
         });
+
+        form?.addEventListener('submit', (e)=>{
+            e.preventDefault();
+            Router.go('/game')
+        })
 
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);

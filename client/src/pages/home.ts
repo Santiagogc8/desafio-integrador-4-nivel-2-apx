@@ -39,6 +39,7 @@ class HomePage extends HTMLElement{
                 margin: 0 auto;
                 position: relative;
                 padding-bottom: 20px;
+                font-family: "Cabin", sans-serif;
             }
 
             h1{
