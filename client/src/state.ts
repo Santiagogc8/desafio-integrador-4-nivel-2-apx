@@ -66,7 +66,6 @@ const state = { // Creamos nuestro state
         } else{ // Si no
             if(res.status === 400){ // Validamos si el estado es un 400
                 const error = await res.json(); // Esperamos el json
-                this.logInPlayer(username)
                 return error.message; // Y retornamos el mensaje que viene
             }
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa

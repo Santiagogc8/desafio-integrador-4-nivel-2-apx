@@ -20,7 +20,7 @@ class AuthPage extends HTMLElement{
             <h2>Ingresa un nombre de usuario</h2>
             <form>
                 <input placeholder="Username" id="username" autocomplete="off" required>
-                <p>El username esta en uso</p>
+                <p></p>
                 <button type="submit" disabled>Continuar</button>
             </form>
             <div class='selection__container'>
@@ -145,9 +145,10 @@ class AuthPage extends HTMLElement{
                 e.preventDefault();
                 const res = await state.logInPlayer(input.value);
 
-                if(res === 'user already exists'){
+                if(res === 'user not found'){
                     input.style.border = '2px solid red';
-                    form.querySelector('p')!.style.display = 'inherit' ;
+                    form.querySelector('p')!.style.display = 'inherit';
+                    form.querySelector('p')!.textContent = 'El usuario no existe';
                     return;
                 }
 
@@ -166,7 +167,8 @@ class AuthPage extends HTMLElement{
 
                 if(res === 'user already exists'){
                     input.style.border = '2px solid red';
-                    form.querySelector('p')!.style.display = 'inherit' ;
+                    form.querySelector('p')!.style.display = 'inherit';
+                    form.querySelector('p')!.textContent = 'El username esta en uso';
                     return;
                 }
 
