@@ -1,7 +1,7 @@
 import { Router } from "@vaadin/router";
 import { state } from "../state";
 
-class LoginPage extends HTMLElement{
+class AuthPage extends HTMLElement{
     shadow: ShadowRoot;
     constructor(){
         super();
@@ -20,6 +20,7 @@ class LoginPage extends HTMLElement{
             <h2>Ingresa un nombre de usuario</h2>
             <form>
                 <input placeholder="Username" id="username" autocomplete="off" required>
+                <p>El username esta en uso</p>
                 <button type="submit" disabled>Continuar</button>
             </form>
             <div class='selection__container'>
@@ -60,13 +61,19 @@ class LoginPage extends HTMLElement{
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
+                gap: 15px;
+            }
+
+            form p{
+                color: red;
+                margin: 0;
+                display: none;
             }
 
             #username{
                 width: 85%;
                 box-sizing: border-box;
                 padding: 10px;
-                margin-bottom: 15px;
                 font-size: 20px;
                 border-radius: 10px;
                 font-family: "Cabin", sans-serif;
@@ -129,19 +136,49 @@ class LoginPage extends HTMLElement{
                 button!.disabled = true;
                 button?.classList.add('disabled');
             }
-            
-            
         });
 
-        form?.addEventListener('submit', (e)=>{
-            e.preventDefault();
-            state.registerPlayer(input.value)
-            Router.go('/game');
-        })
+        const pageUrl = window.location.href;
+
+        if(pageUrl.includes('/login')){
+            form?.addEventListener('submit', async (e)=>{
+                e.preventDefault();
+                const res = await state.logInPlayer(input.value);
+
+                if(res === 'user already exists'){
+                    input.style.border = '2px solid red';
+                    form.querySelector('p')!.style.display = 'inherit' ;
+                    return;
+                }
+
+                Router.go('/game');
+
+                return;
+            })
+        
+        } 
+
+        if(pageUrl.includes('/register')){
+            form?.addEventListener('submit', async (e)=>{
+                e.preventDefault();
+
+                const res = await state.registerPlayer(input.value);
+
+                if(res === 'user already exists'){
+                    input.style.border = '2px solid red';
+                    form.querySelector('p')!.style.display = 'inherit' ;
+                    return;
+                }
+
+                Router.go('/game');
+
+                return;
+            })
+        }
 
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
     }
 }
 
-customElements.define('login-page', LoginPage)
+customElements.define('auth-page', AuthPage)

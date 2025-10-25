@@ -17,7 +17,10 @@ class HomePage extends HTMLElement{
 
         container.innerHTML = `
             <h1>Piedra Papel <span>ó</span> Tijera</h1>
-            <button-el></button-el>
+            <div class="buttons__container">
+                <button-el class="login">Entra</button-el>
+                <button-el class="register">Registrate</button-el>
+            </div>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
@@ -54,9 +57,15 @@ class HomePage extends HTMLElement{
                 color: #91CCAF;
             }
 
-            button-el{
+            .buttons__container{
+                display: flex;
+                gap: 10px;
                 width: 100%;
                 margin-bottom: 40px;
+            }
+
+            .buttons__container button-el{
+                flex: 1;
             }
 
             .selection__container{
@@ -76,9 +85,14 @@ class HomePage extends HTMLElement{
             }
         `
 
-        const button = container.querySelector('button-el');
-        button?.addEventListener('click', ()=>{
+        const btnCotainer = container.querySelector('.buttons__container')
+
+        btnCotainer!.querySelector('.login')!.addEventListener('click', ()=>{
             Router.go('/login')
+        });
+
+        btnCotainer!.querySelector('.register')!.addEventListener('click', ()=>{
+            Router.go('/register')
         });
 
         this.shadow.appendChild(container);

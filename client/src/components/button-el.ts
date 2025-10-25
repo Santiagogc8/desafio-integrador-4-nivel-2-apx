@@ -19,10 +19,14 @@ class ButtonEl extends HTMLElement{ // Creamos la clase ButtonEl que extiende a 
                 container-type: inline-size;
             }
 
+            :host :hover{
+                cursor: pointer;
+            }
+
             button{
                 width: 100%;
                 height: 87px;
-                font-size: 10cqw;
+                font-size: 13cqw;
                 border: 10px solid var(--dark-btn-blue);
                 border-radius: 10px;
                 color: var(--light-btn-font);
