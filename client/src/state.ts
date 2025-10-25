@@ -51,8 +51,8 @@ const state = { // Creamos nuestro state
     setLocalStorage(info: any){
         localStorage.setItem('state', JSON.stringify(info))
     },
-    async registerPlayer(username: string): Promise<string | null>{
-        const res = await fetch(API_BASE_URL + '/signup', { // Creamos nuestra llamada a la API con la url adicionando 'signup'
+    async logInPlayer(username: string): Promise<string | null>{
+        const res = await fetch(API_BASE_URL + '/auth', { // Creamos nuestra llamada a la API con la url adicionando 'auth'
             method: 'POST', // Le pasamos el metodo POST
             headers: { 'Content-Type': 'application/json' }, // Pasamos los headers
             body: JSON.stringify({ // Y el body en string con el username recibido
@@ -61,18 +61,19 @@ const state = { // Creamos nuestro state
         });
 
         if(res.ok){ // Si la respuesta es ok
-            const newUser = await res.json(); // Esperamos el json de la respuesta
-            return newUser.id // Y devolvemos el id del usuario
+            const user = await res.json(); // Esperamos el json de la respuesta
+            
+            return user.id // Y devolvemos el id del usuario
         } else{ // Si no
-            if(res.status === 400){ // Validamos si el estado es un 400
+            if(res.status === 404){ // Validamos si el estado es un 404
                 const error = await res.json(); // Esperamos el json
                 return error.message; // Y retornamos el mensaje que viene
             }
-            return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
+            return null; // En caso de que no sea un 404 sino que sea otra cosa, enviamos otra cosa
         }
     },
-    async logInPlayer(username: string){
-        const res = await fetch(API_BASE_URL + '/auth', { // Creamos nuestra llamada a la API con la url adicionando 'signup'
+    async registerPlayer(username: string): Promise<string | null>{
+        const res = await fetch(API_BASE_URL + '/signup', { // Creamos nuestra llamada a la API con la url adicionando 'signup'
             method: 'POST', // Le pasamos el metodo POST
             headers: { 'Content-Type': 'application/json' }, // Pasamos los headers
             body: JSON.stringify({ // Y el body en string con el username recibido
