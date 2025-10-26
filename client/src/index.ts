@@ -4,6 +4,7 @@ import './router'
 import './pages/home';
 import './pages/auth'
 import './pages/new-game'
+import './pages/game-room'
 
 // Components
 import './components/selection-el';

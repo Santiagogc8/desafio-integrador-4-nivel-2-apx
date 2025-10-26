@@ -6,8 +6,8 @@ const state = { // Creamos nuestro state
     data: { // Creamos un data que guardara los elementos en un objeto
         history: [] as any[], // Que dentro tendra un array de plays
         play: { // Y la play del momento
-            player1: "",
-            player2: ""
+            player1: "" as any,
+            player2: "" as any
         }
     }, 
     listeners: [] as any[], // Creamos el array de listeners
@@ -30,7 +30,13 @@ const state = { // Creamos nuestro state
         return this.data
     },
     setState(newState: any){ // Creamos el metodo setState que recibe un nuevo state de cualquier tipo
-        this.data = {...this.data, ...newState}; // Establecemos a data con una copia de data y el nuevo estado fusionados
+        this.data = {
+            ...this.data,                    // mantenemos todas las propiedades de data
+            play: {                          // reemplazamos solo la parte de play
+                ...this.data.play,           // conservamos valores anteriores de play
+                ...newState.play             // actualizamos solo las propiedades indicadas
+            }
+        };
 
         // Ahora necesitamos de un algoritmo que nos renderice de nuevo todos los elementos. Por lo que hacemos un for que por cada callback de listeners
         for (const callback of this.listeners){
@@ -49,7 +55,7 @@ const state = { // Creamos nuestro state
         }
     }, 
     setLocalStorage(info: any){
-        localStorage.setItem('state', JSON.stringify(info))
+        localStorage.setItem('state', JSON.stringify(info));
     },
     async logInPlayer(username: string): Promise<string | null>{
         const res = await fetch(API_BASE_URL + '/auth', { // Creamos nuestra llamada a la API con la url adicionando 'auth'
@@ -63,7 +69,16 @@ const state = { // Creamos nuestro state
         if(res.ok){ // Si la respuesta es ok
             const user = await res.json(); // Esperamos el json de la respuesta
             
-            return user.id // Y devolvemos el id del usuario
+            this.setState({ // Actualizamos el estado y le decimos
+                play: { // Que en la propiedad play
+                    player1: { // Establezca a player1 con 
+                        username, // El username recibido
+                        id: user.id // Y el userId como id
+                    }
+                }
+            });
+
+            return user.id; // Y devolvemos el id del usuario
         } else{ // Si no
             if(res.status === 404){ // Validamos si el estado es un 404
                 const error = await res.json(); // Esperamos el json
@@ -83,6 +98,16 @@ const state = { // Creamos nuestro state
 
         if(res.ok){ // Si la respuesta es ok
             const newUser = await res.json(); // Esperamos el json de la respuesta
+
+            this.setState({ // Actualizamos el estado
+                play: { // Solo en la propiedad play
+                    player1: { // Le cambiamos al player1
+                        username, // Y le establecemos el username recibido
+                        id: newUser.id // Y el id del nuevo usuario
+                    }
+                }
+            })
+
             return newUser.id // Y devolvemos el id del usuario
         } else{ // Si no
             if(res.status === 400){ // Validamos si el estado es un 400
@@ -91,6 +116,36 @@ const state = { // Creamos nuestro state
             }
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
         }
+    },
+    async setRoom(userId: string){
+        const res = await fetch(API_BASE_URL + '/rooms', { // Creamos nuestra llamada a la API con la url adicionando 'rooms'
+            method: 'POST', // Le pasamos el metodo POST
+            headers: { 'Content-Type': 'application/json' }, // Pasamos los headers
+            body: JSON.stringify({ // Y el body en string con el userId recibido
+                userId
+            })
+        });
+
+        if(res.ok){
+            const roomId = await res.json(); // Convertimos en json la respuesta
+            return roomId;
+        } else{
+            if(res.status === 400){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                console.log(mensaje)
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            if(res.status === 401){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
+        }
+    },
+    async joinRoom(){
+
     }
 }
 

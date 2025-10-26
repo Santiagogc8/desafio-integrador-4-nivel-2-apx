@@ -16,7 +16,7 @@ class GameRoom extends HTMLElement{
         container.classList.add('welcome__container')
 
         container.innerHTML = `
-            
+            <h1>Hola, bienvenido a tu room</h1>
         `
 
         const style = document.createElement('style')

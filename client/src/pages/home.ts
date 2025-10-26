@@ -1,4 +1,5 @@
 import { Router } from "@vaadin/router";
+import { state } from "../state";
 
 class HomePage extends HTMLElement{
     shadow: ShadowRoot;
@@ -85,14 +86,21 @@ class HomePage extends HTMLElement{
             }
         `
 
-        const btnCotainer = container.querySelector('.buttons__container')
+        const currentState = state.getState(); // Obtenemos el estado actual
+
+        if(currentState.play.player1 !== ""){ // Si en la propiedad player1 de play es diferente de ""
+            Router.go('/game'); // Enviamos al user a /game
+            return; // Y terminamos la funcion
+        }
+
+        const btnCotainer = container.querySelector('.buttons__container');
 
         btnCotainer!.querySelector('.login')!.addEventListener('click', ()=>{
-            Router.go('/login')
+            Router.go('/login');
         });
 
         btnCotainer!.querySelector('.register')!.addEventListener('click', ()=>{
-            Router.go('/register')
+            Router.go('/register');
         });
 
         this.shadow.appendChild(container);

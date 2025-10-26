@@ -1,4 +1,5 @@
 import { Router } from "@vaadin/router";
+import { state } from "../state";
 
 class NewGame extends HTMLElement{
     shadow: ShadowRoot;
@@ -18,8 +19,8 @@ class NewGame extends HTMLElement{
         container.innerHTML = `
             <h2>Quieres crear una nueva room o entrar a una room existente?</h2>
             <div class="buttons__container">
-                <button-el>Room nueva</button-el>
-                <button-el>Room existente</button-el>
+                <button-el class="new">Room nueva</button-el>
+                <button-el class="existing">Room existente</button-el>
             </div>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
@@ -79,6 +80,17 @@ class NewGame extends HTMLElement{
                 width: clamp(68px, 8.5vw, 97px);;
             }
         `
+
+        const currentState = state.getState(); // Obtenemos el currentState
+
+        container.querySelector('.new')?.addEventListener('click', async ()=>{
+            const res = await state.setRoom(currentState.play.player1.id);
+            Router.go(`/room/${res.roomId}`);
+        })
+
+        const existingRoomBtn = container.querySelector('.existing');
+
+        
 
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);

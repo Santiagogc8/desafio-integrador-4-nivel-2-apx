@@ -68,7 +68,7 @@ app.post('/auth', async (req, res) => {
 app.post('/rooms', async (req, res)=>{
     const {userId} = req.body; // Obtenemos el userId desde el body
 
-    if(!userId) res.status(400).json({error: "a username was expected"}); // Si no nos pasaron un userId enviamos un estado 400
+    if(!userId) res.status(400).json({error: "an userId was expected"}); // Si no nos pasaron un userId enviamos un estado 400
 
     const searchUser = await usersCollection.doc(userId).get(); // Buscamos el documento con el userId recibido y lo obtenemos
 
@@ -88,8 +88,6 @@ app.post('/rooms', async (req, res)=>{
         let roomDoc; // Declaramos una variable roomDoc
 
         do{ // Ejecutamos un do donde
-            console.log(shortId)
-            
             shortId = uuidv4().slice(0, 6).toUpperCase(); // Establecemos un id alfanumerico aleatorio y lo cortamos desde la posicion 0 hasta la 6 y lo guardamos en la variable shortId
 
             roomDoc = await roomsCollection.doc(shortId).get(); // Buscamos si existe una room con el shortId recibido y la obtenemos y lo guardamos en roomDoc
