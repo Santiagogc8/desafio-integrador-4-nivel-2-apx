@@ -141,12 +141,14 @@ class NewGame extends HTMLElement{
             form?.classList.add('show');
         });
 
-        form?.addEventListener('submit', (e)=>{
+        form?.addEventListener('submit', async (e)=>{
             e.preventDefault();
 
             const input = container.querySelector('#roomId') as HTMLInputElement;
+            const userId = currentState.play.player1.id;
 
-            
+            const res = await state.joinRoom(userId, input.value);
+            console.log(res);
         })
 
         this.shadow.appendChild(container);

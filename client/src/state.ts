@@ -144,7 +144,41 @@ const state = { // Creamos nuestro state
         }
     },
     async joinRoom(userId: string, roomId: string){
+        const res = await fetch(API_BASE_URL + '/rooms/'+roomId, { // Creamos nuestra llamada a la API con la url adicionando 'rooms'
+            method: 'PATCH', // Le pasamos el metodo POST
+            headers: { 'Content-Type': 'application/json' }, // Pasamos los headers
+            body: JSON.stringify({ // Y el body en string con el userId recibido y el roomId
+                userId,
+                roomId
+            })
+        });
 
+        if(res.ok){
+            const message = await res.json(); // Convertimos en json la respuesta
+            return message;
+        } else{
+            if(res.status === 400){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            if(res.status === 401){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            if(res.status === 403){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            if(res.status === 404){ // Validamos si el estado es un 400
+                const mensaje = await res.json(); // Esperamos el json
+                return mensaje.error; // Y retornamos el mensaje que viene
+            }
+
+            return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
+        }
     }
 }
 
