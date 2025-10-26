@@ -132,7 +132,6 @@ const state = { // Creamos nuestro state
         } else{
             if(res.status === 400){ // Validamos si el estado es un 400
                 const mensaje = await res.json(); // Esperamos el json
-                console.log(mensaje)
                 return mensaje.error; // Y retornamos el mensaje que viene
             }
 
@@ -144,7 +143,7 @@ const state = { // Creamos nuestro state
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
         }
     },
-    async joinRoom(){
+    async joinRoom(userId: string, roomId: string){
 
     }
 }

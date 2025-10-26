@@ -22,6 +22,10 @@ class NewGame extends HTMLElement{
                 <button-el class="new">Room nueva</button-el>
                 <button-el class="existing">Room existente</button-el>
             </div>
+            <form class="hide">
+                <input id="roomId" placeholder="ID Room" maxlength="6" required>
+                <button type="submit">Entrar</button>
+            </form>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
@@ -64,6 +68,41 @@ class NewGame extends HTMLElement{
                 flex: 1;
             }
 
+            form.show{
+                display: flex;
+                width: 284px;
+                gap: 10px;
+            }
+
+            form input{
+                padding: 10px;
+                width: 100%;
+                font-size: 1.5rem;
+            }
+
+            form button{
+                width: 100%;
+                padding: 10px;
+                font-size: 1.5rem;
+                border: 10px solid var(--dark-btn-blue);
+                border-radius: 10px;
+                color: var(--light-btn-font);
+                background-color: var(--light-btn-blue);
+                box-sizing: border-box;
+            }
+
+            form button:hover{
+                cursor: pointer;
+            }
+
+            form *{
+                flex: 1;
+            }
+
+            form.hide{
+                display: none;
+            }
+
             .selection__container{
                 position: absolute;
                 bottom: -30px;
@@ -83,14 +122,32 @@ class NewGame extends HTMLElement{
 
         const currentState = state.getState(); // Obtenemos el currentState
 
-        container.querySelector('.new')?.addEventListener('click', async ()=>{
+        const newRoomBtn = container.querySelector('.new') as HTMLElement;
+        const existingRoomBtn = container.querySelector('.existing') as HTMLElement;
+        const form = container.querySelector('form');
+
+        newRoomBtn?.addEventListener('click', async ()=>{
             const res = await state.setRoom(currentState.play.player1.id);
             Router.go(`/room/${res.roomId}`);
         })
 
-        const existingRoomBtn = container.querySelector('.existing');
+        existingRoomBtn?.addEventListener('click', async ()=>{
+            newRoomBtn!.style.display = 'none';
+            existingRoomBtn!.style.display = 'none';
 
-        
+            form?.classList.remove('hide');
+
+            container.querySelector('h2')!.textContent = 'Ingresa el id de la sala'
+            form?.classList.add('show');
+        });
+
+        form?.addEventListener('submit', (e)=>{
+            e.preventDefault();
+
+            const input = container.querySelector('#roomId') as HTMLInputElement;
+
+            
+        })
 
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
