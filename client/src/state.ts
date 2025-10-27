@@ -2,14 +2,33 @@ import { rtdb, ref, onValue } from './rtdb';
 
 const API_BASE_URL = "http://localhost:3000";
 
+interface StateData {
+    play: {
+        player1: {
+            username: string;
+            id: string; // Asumimos que también guardamos el ID
+        } | null;
+        player2: {
+            username: string;
+            id: string;
+        } | null;
+    };
+    // 💡 Propiedad que faltaba en la definición inicial
+    roundStatus: string; 
+    // 💡 Podemos agregar el shortRoomId y rtdbRoomId para referencia
+    shortRoomId?: string;
+    rtdbRoomId?: string; 
+    // ... otras propiedades que quieras que sean tipadas
+}
+
 const state = { // Creamos nuestro state
     data: { // Creamos un data que guardara los elementos en un objeto
-        history: [] as any[], // Que dentro tendra un array de plays
-        play: { // Y la play del momento
-            player1: "" as any,
-            player2: "" as any
-        }
-    }, 
+        play: {
+            player1: null, // Inicialmente null o el objeto con username/id si ya está logueado
+            player2: null
+        },
+        roundStatus: "initial", // Valor inicial de la ronda
+    } as StateData, 
     listeners: [] as any[], // Creamos el array de listeners
     initLocalStorage(){ // Creamos un metodo que inicializara el localStorage
         // Obtenemos la data del localStorage, si es null, usa un objeto vacío '{}' por defecto
@@ -31,10 +50,13 @@ const state = { // Creamos nuestro state
     },
     setState(newState: any){ // Creamos el metodo setState que recibe un nuevo state de cualquier tipo
         this.data = {
-            ...this.data,                    // mantenemos todas las propiedades de data
-            play: {                          // reemplazamos solo la parte de play
-                ...this.data.play,           // conservamos valores anteriores de play
-                ...newState.play             // actualizamos solo las propiedades indicadas
+            ...this.data, // Mantiene la data actual
+            ...newState, // Mezcla las propiedades del nuevo estado
+
+            // Y luego sobrescribimos play con una mezcla profunda
+            play: {
+                ...this.data.play, // Manteniendo lo que ya tenia
+                ...newState.play // Y agregando lo nuevo
             }
         };
 
@@ -55,7 +77,23 @@ const state = { // Creamos nuestro state
         }
     }, 
     setLocalStorage(info: any){
-        localStorage.setItem('state', JSON.stringify(info));
+        const player1Info = info.play.player1;
+
+        if(player1Info && player1Info.id){
+            const filteredData = {
+                play: {
+                    player1: {
+                        username: player1Info.username,
+                        id: player1Info.id
+                    },
+                    player2: null
+                }
+            }
+
+            localStorage.setItem('state', JSON.stringify(filteredData));
+        } else{
+            localStorage.removeItem('state');
+        }
     },
     async logInPlayer(username: string): Promise<string | null>{
         const res = await fetch(API_BASE_URL + '/auth', { // Creamos nuestra llamada a la API con la url adicionando 'auth'
@@ -154,8 +192,8 @@ const state = { // Creamos nuestro state
         });
 
         if(res.ok){
-            const message = await res.json(); // Convertimos en json la respuesta
-            return message;
+            const response = await res.json(); // Convertimos en json la respuesta
+            return response.message;
         } else{
             if(res.status === 400){ // Validamos si el estado es un 400
                 const mensaje = await res.json(); // Esperamos el json
@@ -179,6 +217,27 @@ const state = { // Creamos nuestro state
 
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
         }
+    },
+    getRoomInfo(roomId: string){
+        const rtdbRoomRef = ref(rtdb, `/rooms/${roomId}`);
+
+        onValue(rtdbRoomRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const roomData = snapshot.val();
+                
+                this.setState({
+                    play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
+                        player2: roomData.player2
+                    },
+                    
+                    roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
+                });
+
+                console.log(this.getState())
+            } else {
+                console.error("La RTDB no existe")
+            }
+        });
     }
 }
 

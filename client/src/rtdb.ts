@@ -5,7 +5,7 @@ import { getDatabase, ref, onValue } from "firebase/database"; // Y getDatabase,
 const app = initializeApp({ // Inicializamos nuestros datos de la rtdb
     apiKey: '3nSmC5YskdClrl12uCiWW4rWE97LZ7ThC2EoCPoS',
     authDomain: 'desafio-integrador-4-nivel-2.firebaseapp.com',
-    databaseURL: 'https://desafio-integrador-4-nivel-2-default-rtdb.firebaseio.com/',
+    databaseURL: 'https://desafio-integrador-4-nivel-2-default-rtdb.firebaseio.com',
     projectId: 'desafio-integrador-4-nivel-2'
 });
 

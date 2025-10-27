@@ -26,6 +26,7 @@ class NewGame extends HTMLElement{
                 <input id="roomId" placeholder="ID Room" maxlength="6" required>
                 <button type="submit">Entrar</button>
             </form>
+            <p id="server-response"></p>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
@@ -103,6 +104,12 @@ class NewGame extends HTMLElement{
                 display: none;
             }
 
+            p#server-response{
+                color: red;
+                font-weight: 600;
+                display: none;
+            }
+
             .selection__container{
                 position: absolute;
                 bottom: -30px;
@@ -122,12 +129,14 @@ class NewGame extends HTMLElement{
 
         const currentState = state.getState(); // Obtenemos el currentState
 
+        console.log(currentState)
+
         const newRoomBtn = container.querySelector('.new') as HTMLElement;
         const existingRoomBtn = container.querySelector('.existing') as HTMLElement;
         const form = container.querySelector('form');
 
         newRoomBtn?.addEventListener('click', async ()=>{
-            const res = await state.setRoom(currentState.play.player1.id);
+            const res = await state.setRoom(currentState.play.player1!.id);
             Router.go(`/room/${res.roomId}`);
         })
 
@@ -145,10 +154,33 @@ class NewGame extends HTMLElement{
             e.preventDefault();
 
             const input = container.querySelector('#roomId') as HTMLInputElement;
-            const userId = currentState.play.player1.id;
+            const userId = currentState.play.player1!.id;
+            const pServerResponseEl = container.querySelector('#server-response') as HTMLParagraphElement;
 
             const res = await state.joinRoom(userId, input.value);
-            console.log(res);
+
+            if(res === "updated"){
+                Router.go(`/room/${input.value}`);
+                return;
+            }
+
+            if(res === "the room is full"){
+                pServerResponseEl.style.display = "inherit";
+                pServerResponseEl.textContent = "La room esta llena";
+                return;
+            }
+
+            if(res === "room not found"){
+                pServerResponseEl.style.display = "inherit";
+                pServerResponseEl.textContent = "La room no existe";
+                return;
+            }
+
+            if(res === "you are not authorized"){
+                pServerResponseEl.style.display = "inherit";
+                pServerResponseEl.textContent = "No estas autorizado";
+                return;
+            }
         })
 
         this.shadow.appendChild(container);

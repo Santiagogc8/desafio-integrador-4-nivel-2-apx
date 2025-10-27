@@ -2,27 +2,52 @@ import { state } from "../state";
 
 class GameRoom extends HTMLElement{
     shadow: ShadowRoot;
+    private unsubscribe!: () => void;
     constructor(){
         super();
         this.shadow = this.attachShadow({"mode": "open"});
     }
 
     connectedCallback(){
+        // 1. INICIAMOS el listener de la RTDB (Solo una vez)
+        // Esto empieza el flujo de datos: RTDB -> state.setState()
+        state.getRoomInfo("jYh0JiOoVWct4qTKsImJO"); 
+        
+        // 2. SUSCRIBIMOS el componente al State Manager
+        // Esto le dice al state: "Cada vez que cambies, llama a this.render()"
+        this.unsubscribe = state.subscribe(() => {
+            this.render(); // 👈 ¡La clave de la re-renderización!
+        });
+
+        // 3. Renderizado inicial (el componente se dibuja la primera vez)
         this.render();
     }
 
-    render(){
+    disconnectedCallback() {
+        // LIMPIEZA: Al salir del DOM, cancelamos la suscripción para evitar memory leaks
+        if (this.unsubscribe) {
+            this.unsubscribe();
+        }
+    }
+
+    async render(){
+        const currentState = state.getState();
+
+        const roundStatus = currentState.roundStatus === "waiting player 2" ? "Esperando a player 2...": "Esperando a confirmacion";
+        const thisUser = currentState.play.player1?.username;
+        const otherUser = currentState.play.player2?.username || "Esperando...";
+
         const container = document.createElement('div');
-        container.classList.add('welcome__container')
+        container.classList.add('welcome__container');
 
         container.innerHTML = `
-            <h2>Que dice la RTDB?</h2>
+            <h2>${roundStatus}</h2>
             <div class="room-info">
                 <div>
-                    <p id="this-player">This</p>
-                    <p id="other-player">Waiting...</p>
+                    <p id="this-player">${thisUser}</p>
+                    <p id="other-player">${otherUser}</p>
                 </div>
-                <p id="roomId"></p>
+                <p id="roomId">${window.location.href.slice(-6)}</p>
             </div>
             <button-el class="new">Room nueva</button-el>
             <div class='selection__container'>
@@ -58,10 +83,6 @@ class GameRoom extends HTMLElement{
                 width: 100%;
             }
 
-            #this-player{
-                text-transform: capitalize;
-            }
-
             h2{
                 color: #009048;
                 font-size: min(10vw, 40px);
@@ -91,13 +112,7 @@ class GameRoom extends HTMLElement{
             }
         `
 
-        const currentState = state.getState()
-
-        const roomInfo = container.querySelector('.room-info');
-
-        roomInfo!.querySelector('#this-player')!.textContent = currentState.play.player1.username;
-        roomInfo!.querySelector('#roomId')!.textContent = window.location.href.slice(-6)
-
+        this.shadow.innerHTML = ''; // 💡 Limpiar el shadow DOM antes de redibujar
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
     }

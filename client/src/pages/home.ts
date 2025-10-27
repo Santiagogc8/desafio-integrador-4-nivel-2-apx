@@ -88,7 +88,7 @@ class HomePage extends HTMLElement{
 
         const currentState = state.getState(); // Obtenemos el estado actual
 
-        if(currentState.play.player1 !== ""){ // Si en la propiedad player1 de play es diferente de ""
+        if(currentState.play.player1){ // Si en la propiedad player1 de play es diferente de ""
             Router.go('/game'); // Enviamos al user a /game
             return; // Y terminamos la funcion
         }

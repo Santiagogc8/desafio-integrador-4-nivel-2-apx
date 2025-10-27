@@ -62,7 +62,6 @@ app.post('/auth', async (req, res) => {
     }
 });
 
-
 // Crear una nueva room
 // Validaremos si un usuario esta "registrado". En caso afirmativo, crearemos una room con un id corto y dentro de este doc, guardaremos la data del la rtdb
 app.post('/rooms', async (req, res)=>{
@@ -79,6 +78,7 @@ app.post('/rooms', async (req, res)=>{
             roundStatus: "waiting player 2", // Un estado de ronda por defecto
             player1: {
                 userId,
+                username: searchUser.data().username,
                 choice: null
             }, // El player1 con un objeto que tiene su id y una seleccion nula
             player2: null // Y el player2 en null
@@ -131,6 +131,7 @@ app.patch('/rooms/:roomId', async (req, res)=>{
                     newRtdbRoomRef.update({ // Y le hace un update
                         player2: {
                             userId,
+                            username: searchUser.data().username,
                             choice: null
                         },
                         roundStatus: "waiting selections"
@@ -240,6 +241,8 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
         res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
     }
 });
+
+// ME FALTA UN GET PARA OBTENER EL ID LARGO DE LA RTDB
 
 // Determinamos la ruta absoluta a la carpeta 'dist' del frontend
 // __dirname es 'desafio-integrador-4/server'. Subimos (..) y entramos a 'client/dist'
