@@ -1,4 +1,4 @@
-import { rtdb, ref, onValue, onDisconnect, set } from './rtdb';
+import { rtdb, ref, onValue, onDisconnect, set, get, update } from './rtdb';
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -6,11 +6,13 @@ interface StateData {
     play: {
         player1: {
             username: string;
-            id: string; // Asumimos que también guardamos el ID
+            userId: string; // Asumimos que también guardamos el ID
+            isReady: boolean
         } | null;
         player2: {
             username: string;
-            id: string;
+            userId: string;
+            isReady: boolean
         } | null;
     };
     // 💡 Propiedad que faltaba en la definición inicial
@@ -84,7 +86,7 @@ const state = { // Creamos nuestro state
                 play: {
                     player1: {
                         username: player1Info.username,
-                        id: player1Info.id
+                        userId: player1Info.id
                     },
                     player2: null
                 }
@@ -111,7 +113,7 @@ const state = { // Creamos nuestro state
                 play: { // Que en la propiedad play
                     player1: { // Establezca a player1 con 
                         username, // El username recibido
-                        id: user.id // Y el userId como id
+                        userId: user.id // Y el userId como id
                     }
                 }
             });
@@ -141,7 +143,7 @@ const state = { // Creamos nuestro state
                 play: { // Solo en la propiedad play
                     player1: { // Le cambiamos al player1
                         username, // Y le establecemos el username recibido
-                        id: newUser.id // Y el id del nuevo usuario
+                        userId: newUser.id // Y el id del nuevo usuario
                     }
                 }
             })
@@ -231,13 +233,14 @@ const state = { // Creamos nuestro state
                 const currentState = this.getState(); 
                 
                 // Usamos el ID del state local para saber el rol en la DB de la sala.
-                const localUserId = currentState.play.player1?.id;
+                const localUserId = currentState.play.player1?.userId;
                 
                 // Si el ID de la DB no existe, hay un error de sincronización, salimos.
                 if (!localUserId) return; 
 
                 // Validamos si el userId del player1 de la rtdb es igual al local
                 const isLocalUserP1_inDB = roomData.player1.userId === localUserId;
+                const localPlayerData = isLocalUserP1_inDB ? roomData.player1 : roomData.player2;
                 
                 // Mapear los datos de la DB al State Local:
                 let opponentData = null;
@@ -255,6 +258,10 @@ const state = { // Creamos nuestro state
                     // play.player1 NO se actualiza aquí, ya que se hizo en logInPlayer/registerPlayer.
                     // play.player2 recibe los datos del oponente.
                     play: {
+                        player1: {
+                            ...localPlayerData,          // Añade/sobrescribe isReady, online, selection, etc.
+                            ...currentState.play.player1 // Mantiene username, id, etc.
+                        },
                         player2: opponentData // Solo actualizamos al oponente
                     },
                     roundStatus: roomData.roundStatus // Actualizamos el estado de la ronda
@@ -281,6 +288,46 @@ const state = { // Creamos nuestro state
             .catch(error => {
                 console.error("Error al registrar la presencia:", error);
             });
+    },
+    async setPlayerReady(isReadyStatus: boolean, roomId: string){
+        const currentState = this.getState();
+        const response = await fetch(API_BASE_URL + `/rooms/${roomId}`); // Hacemos un get a la room con la roomId recibida
+        const rtdbRes = await response.json();
+        const rtdbRoomId = rtdbRes.rtdbRoomId
+        const localUserId = currentState.play.player1?.userId
+
+        if(!rtdbRoomId || !localUserId){ // Si la info de la rtdbRoomId o el localUserId no estan
+            console.error("Faltan datos de sala o usuario."); // Enviamos un error y terminamos la funcion
+            return;
+        }
+
+        const rtdbRef = ref(rtdb, `/rooms/${rtdbRoomId}`); // Obtenemos la referencia de la rtdb con el roomId obtenido
+        const roomSnap = await get(rtdbRef); // Obtenemos la snap de la rtdb
+        const roomData = roomSnap.val(); // Y guardamos la data en una variable
+
+        let playerKey: string | null = null; // Creamos una variable para guardar la key del user que necesitamos modificar y lo inicializamos en null
+
+        if (roomData.player1.userId === localUserId) { // Si el id del player 1 es igual al que tenemos en local
+            playerKey = 'player1'; // Establecemos a playerKey en player1
+        } else if (roomData.player2 && roomData.player2.userId === localUserId) { // En cambio, si player2 existe y el id de player2 en la room es igual al que tenemos en local 
+            playerKey = 'player2'; // Establecemos a playerKey en player2
+        }
+
+        if (!playerKey) { // Si playerKey es null despues de la verificacion
+            console.error("No se pudo identificar el rol del jugador en la sala."); // Enviamos un error y terminamos la funcion
+            return;
+        }
+
+        const updatePath = `${playerKey}/isReady`; // Guardamos la ruta para updatear a la rtdb. Esta se encuentra en el usuario que tenemos y /isReady
+
+        try {
+            await update(rtdbRef, { // Intentamos hnacer el update en la rtdbRef
+                [updatePath]: isReadyStatus // [updatePath] permite usar la variable como clave, es decir, ${playerKey}/isReady
+            });
+            console.log(`Estado de Ready actualizado a ${isReadyStatus}`);
+        } catch (error) {
+            console.error("Error al actualizar el estado de Ready:", error);
+        }
     }
 }
 

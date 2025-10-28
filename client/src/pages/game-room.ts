@@ -1,4 +1,5 @@
 import { state } from "../state";
+import { Router } from "@vaadin/router";
 
 class GameRoom extends HTMLElement{
     shadow: ShadowRoot;
@@ -13,21 +14,26 @@ class GameRoom extends HTMLElement{
         // Esto empieza el flujo de datos: RTDB -> state.setState()
         state.getRoomInfo(window.location.href.slice(-6)); 
         
-        // 2. SUSCRIBIMOS el componente al State Manager
+        // 2. Suscribimos el componente al State Manager
         // Esto le dice al state: "Cada vez que cambies, llama a this.render()"
         this.unsubscribe = state.subscribe(() => {
-            this.render(); // 👈 ¡La clave de la re-renderización!
+            this.render(); // re-renderización
         });
 
-        // 3. Renderizado inicial (el componente se dibuja la primera vez)
+        // El componente se dibuja la primera vez
         this.render();
     }
 
     disconnectedCallback() {
-        // LIMPIEZA: Al salir del DOM, cancelamos la suscripción para evitar memory leaks
+        // Al salir del DOM, cancelamos la suscripción para evitar escapes de memoria
         if (this.unsubscribe) {
             this.unsubscribe();
         }
+    }
+
+    handleReadyClick = () => {
+        const roomId = window.location.href.slice(-6);
+        state.setPlayerReady(true, roomId);
     }
 
     async render(){
@@ -36,6 +42,16 @@ class GameRoom extends HTMLElement{
         const roundStatus = currentState.roundStatus === "waiting player 2" ? "Esperando a player 2...": "Esperando a confirmacion";
         const thisUser = currentState.play.player1?.username;
         const otherUser = currentState.play.player2?.username || "Esperando...";
+
+        if(!thisUser){
+            Router.go('/')
+        }
+
+        if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
+            console.log("Los dos players estan listos");
+            const counterEl = document.createElement('counter-el');
+            counterEl.setAttribute('count', "3")
+        }
 
         const container = document.createElement('div');
         container.classList.add('welcome__container');
@@ -116,6 +132,8 @@ class GameRoom extends HTMLElement{
         if(otherUser !== "Esperando..."){
             const buttonEl = container.querySelector('button-el') as HTMLElement;
             buttonEl!.style.display = 'inherit';
+            
+            buttonEl.addEventListener('click', this.handleReadyClick);
         }
 
         this.shadow.innerHTML = ''; // Limpiar el shadow DOM antes de redibujar

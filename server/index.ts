@@ -255,12 +255,12 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
 app.get('/rooms/:roomId', async (req, res)=>{
     const {roomId} = req.params;
 
-    const rtdbRoomId = await roomsCollection.doc(roomId).get();
+    const roomDoc = await roomsCollection.doc(roomId).get();
 
-    if (rtdbRoomId.exists){
-        const rtdbData = rtdbRoomId.data();
+    if (roomDoc.exists){
+        const rtdbRoomId = roomDoc.data().rtdbRoomId;
         res.json({
-            rtdbRoomId: rtdbData.rtdbRoomId
+            rtdbRoomId
         })
     } else {
         res.status(404).json({error: "room doesn't exists"})

@@ -134,7 +134,7 @@ class NewGame extends HTMLElement{
         const form = container.querySelector('form');
 
         newRoomBtn?.addEventListener('click', async ()=>{
-            const res = await state.setRoom(currentState.play.player1!.id);
+            const res = await state.setRoom(currentState.play.player1!.userId);
             Router.go(`/room/${res.roomId}`);
         })
 
@@ -152,7 +152,7 @@ class NewGame extends HTMLElement{
             e.preventDefault();
 
             const input = container.querySelector('#roomId') as HTMLInputElement;
-            const userId = currentState.play.player1!.id;
+            const userId = currentState.play.player1!.userId;
             const pServerResponseEl = container.querySelector('#server-response') as HTMLParagraphElement;
 
             const res = await state.joinRoom(userId, input.value);
