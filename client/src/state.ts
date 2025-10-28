@@ -218,22 +218,35 @@ const state = { // Creamos nuestro state
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
         }
     },
-    getRoomInfo(roomId: string){
-        const rtdbRoomRef = ref(rtdb, `/rooms/${roomId}`);
+    async getRoomInfo(roomId: string){
+        const response = await fetch(API_BASE_URL + `/rooms/${roomId}`);
+
+        const rtdbRes = await response.json();
+
+        const rtdbRoomRef = ref(rtdb, `/rooms/${rtdbRes.rtdbRoomId}`);
 
         onValue(rtdbRoomRef, (snapshot) => {
             if (snapshot.exists()) {
                 const roomData = snapshot.val();
-                
-                this.setState({
-                    play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
-                        player2: roomData.player2
-                    },
-                    
-                    roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
-                });
+                const currentState = this.getState()
 
-                console.log(this.getState())
+                if(roomData.player1.userId === currentState.play.player1!.id){
+                    this.setState({
+                        play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
+                            player2: roomData.player2
+                        },
+                        
+                        roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
+                    });
+                } else {
+                    this.setState({
+                        play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
+                            player2: roomData.player1
+                        },
+                        
+                        roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
+                    });
+                }
             } else {
                 console.error("La RTDB no existe")
             }

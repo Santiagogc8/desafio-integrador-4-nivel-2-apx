@@ -242,7 +242,21 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
     }
 });
 
-// ME FALTA UN GET PARA OBTENER EL ID LARGO DE LA RTDB
+// Obtener id largo rtdb
+app.get('/rooms/:roomId', async (req, res)=>{
+    const {roomId} = req.params;
+
+    const rtdbRoomId = await roomsCollection.doc(roomId).get();
+
+    if (rtdbRoomId.exists){
+        const rtdbData = rtdbRoomId.data();
+        res.json({
+            rtdbRoomId: rtdbData.rtdbRoomId
+        })
+    } else {
+        res.status(404).json({error: "room doesn't exists"})
+    }
+})
 
 // Determinamos la ruta absoluta a la carpeta 'dist' del frontend
 // __dirname es 'desafio-integrador-4/server'. Subimos (..) y entramos a 'client/dist'

@@ -11,7 +11,7 @@ class GameRoom extends HTMLElement{
     connectedCallback(){
         // 1. INICIAMOS el listener de la RTDB (Solo una vez)
         // Esto empieza el flujo de datos: RTDB -> state.setState()
-        state.getRoomInfo("jYh0JiOoVWct4qTKsImJO"); 
+        state.getRoomInfo(window.location.href.slice(-6)); 
         
         // 2. SUSCRIBIMOS el componente al State Manager
         // Esto le dice al state: "Cada vez que cambies, llama a this.render()"
@@ -49,7 +49,7 @@ class GameRoom extends HTMLElement{
                 </div>
                 <p id="roomId">${window.location.href.slice(-6)}</p>
             </div>
-            <button-el class="new">Room nueva</button-el>
+            <button-el class="new">Estoy listo</button-el>
             <div class='selection__container'>
                 <selection-el image="tijeras"></selection-el>
                 <selection-el image="piedra"></selection-el>
