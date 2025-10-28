@@ -1,3 +1,5 @@
+import { Router } from "@vaadin/router";
+
 class CounterEl extends HTMLElement {
     // Creamos un customElement para el contador
     shadow: ShadowRoot; // Le decimos que tendrá shadow

@@ -14,7 +14,14 @@ class NewGame extends HTMLElement{
 
     render(){
         const container = document.createElement('div');
-        container.classList.add('welcome__container')
+        container.classList.add('welcome__container');
+
+        const currentState = state.getState();
+        const thisUser = currentState.play.player1?.username;
+
+        if(!thisUser){
+            Router.go('/');
+        }
 
         container.innerHTML = `
             <h2>Quieres crear una nueva room o entrar a una room existente?</h2>
@@ -126,8 +133,6 @@ class NewGame extends HTMLElement{
                 width: clamp(68px, 8.5vw, 97px);;
             }
         `
-
-        const currentState = state.getState(); // Obtenemos el currentState
 
         const newRoomBtn = container.querySelector('.new') as HTMLElement;
         const existingRoomBtn = container.querySelector('.existing') as HTMLElement;

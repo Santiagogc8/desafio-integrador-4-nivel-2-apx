@@ -166,7 +166,7 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
     const {userId, choice} = req.body; // Obtenemos el userId y la seleccion del usuario del body
     const {roomId} = req.params; // Y obtenemos el roomId de los parametros
 
-    if(!userId) res.status(400).json({error: "a username was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
+    if(!userId) res.status(400).json({error: "an userId was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
 
     const searchUser = await usersCollection.doc(userId).get(); // Buscamos al usuario en la userCollection y le hacemos un get
 
@@ -199,8 +199,11 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
 
             const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val(); // Obtenemos la data actualizada del roomRef y accedemos a su valor
 
+            const player1Choice = updatedRoomData.player1?.choice; // Protege la elección de P1
+            const player2Choice = updatedRoomData.player2?.choice;
+
             // Sobre la data de la room actualizada, entramos a la propiedad choice de cada player y validamos que no sea null (para que podamos establecer los resultados)
-            if(updatedRoomData.player1.choice !== null && updatedRoomData.player2.choice !== null){
+            if(player1Choice && player2Choice){
                 const rulesMap = { // Establecemos las reglas del juego
                     piedra: "tijeras", // La piedra le gana a las tijeras
                     papel: "piedra", // El papel a la piedra

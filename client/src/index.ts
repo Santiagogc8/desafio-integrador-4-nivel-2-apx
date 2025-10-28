@@ -9,4 +9,4 @@ import './pages/game-room'
 // Components
 import './components/selection-el';
 import './components/button-el';
-import './components/counter-el'
+import './components/counter-el';

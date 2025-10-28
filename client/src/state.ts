@@ -81,12 +81,12 @@ const state = { // Creamos nuestro state
     setLocalStorage(info: any){
         const player1Info = info.play.player1;
 
-        if(player1Info && player1Info.id){
+        if(player1Info && player1Info.userId){
             const filteredData = {
                 play: {
                     player1: {
                         username: player1Info.username,
-                        userId: player1Info.id
+                        userId: player1Info.userId
                     },
                     player2: null
                 }
@@ -328,6 +328,29 @@ const state = { // Creamos nuestro state
         } catch (error) {
             console.error("Error al actualizar el estado de Ready:", error);
         }
+    },
+    async sendPlay(roomId: string, choice: string){
+        const currentState = this.getState(); // Obtenemos el estado actual
+        const userId = currentState.play.player1?.userId;
+
+        console.log(choice)
+
+        const res = await fetch(API_BASE_URL + `/rooms/${roomId}/play`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId,
+                choice
+            })
+        })
+
+        const response = await res.json();
+
+        if(res.ok) response.message;
+
+        if(res.status === 404) response.error;
+
+        if(res.status === 401) response.error;
     }
 }
 

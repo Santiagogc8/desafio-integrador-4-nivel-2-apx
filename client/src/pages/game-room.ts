@@ -44,34 +44,78 @@ class GameRoom extends HTMLElement{
         const otherUser = currentState.play.player2?.username || "Esperando...";
 
         if(!thisUser){
-            Router.go('/')
-        }
-
-        if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
-            console.log("Los dos players estan listos");
-            const counterEl = document.createElement('counter-el');
-            counterEl.setAttribute('count', "3")
+            Router.go('/');
         }
 
         const container = document.createElement('div');
         container.classList.add('welcome__container');
 
-        container.innerHTML = `
-            <h2>${roundStatus}</h2>
-            <div class="room-info">
-                <div>
-                    <p id="this-player">${thisUser}</p>
-                    <p id="other-player">${otherUser}</p>
+        if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
+            container.innerHTML = `
+                <counter-el count="3"></counter-el>
+                <div class='selection__container'>
+                    <selection-el image="tijeras"></selection-el>
+                    <selection-el image="piedra"></selection-el>
+                    <selection-el image="papel"></selection-el>
                 </div>
-                <p id="roomId">${window.location.href.slice(-6)}</p>
-            </div>
-            <button-el class="new">Estoy listo</button-el>
-            <div class='selection__container'>
-                <selection-el image="tijeras"></selection-el>
-                <selection-el image="piedra"></selection-el>
-                <selection-el image="papel"></selection-el>
-            </div>
-        `
+            `
+
+            const allSelections = container.querySelectorAll("selection-el");
+
+            let lastSelectedMove = "";
+
+            const handleSelection = (e: any) => {
+                const selectedMove = e.detail.selection; // Obtenemos el detail.selection
+
+                allSelections.forEach((element) => { // Por cada elemento de allSelections
+                    const image = element.shadowRoot?.querySelector("img"); // Obtenemos el shadow y la imagen
+
+                    if (!image) return; // Si la imagen no es true, se termina la funcion
+                    image.style.transform = "scale(1)"; // Le damos estilos a todas las imagenes
+                    image.style.opacity = "0.5";
+
+                    if (element.getAttribute("image") === selectedMove) { // Y a la imagen seleccionada le hacemos un estilo diferente
+                        image.style.transform = "scale(1.5)";
+                        image.style.opacity = "1";
+                    }
+                });
+
+                lastSelectedMove = selectedMove; // Establecemos el lastSelectedMove con el valor de selectedMove
+            };
+
+            container.addEventListener("selection-info", handleSelection); // Ejecutamos la funcion handleSelection en el evento selection-info
+
+            // Solo al terminar el contador se registra la jugada y se elimina el listener
+            container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
+                state.sendPlay(window.location.href.slice(-6), lastSelectedMove)
+                container.removeEventListener("selection-info", handleSelection); // Y removemos el eventListener
+            });
+
+        } else {
+            container.innerHTML = `
+                <h2>${roundStatus}</h2>
+                <div class="room-info">
+                    <div>
+                        <p id="this-player">${thisUser}</p>
+                        <p id="other-player">${otherUser}</p>
+                    </div>
+                    <p id="roomId">${window.location.href.slice(-6)}</p>
+                </div>
+                <button-el class="new">Estoy listo</button-el>
+                <div class='selection__container'>
+                    <selection-el image="tijeras"></selection-el>
+                    <selection-el image="piedra"></selection-el>
+                    <selection-el image="papel"></selection-el>
+                </div>
+            `
+
+            if(otherUser !== "Esperando..."){
+                const buttonEl = container.querySelector('button-el') as HTMLElement;
+                buttonEl!.style.display = 'inherit';
+                
+                buttonEl.addEventListener('click', this.handleReadyClick);
+            }
+        }
 
         const style = document.createElement('style')
 
@@ -128,13 +172,6 @@ class GameRoom extends HTMLElement{
                 width: clamp(68px, 8.5vw, 97px);;
             }
         `
-
-        if(otherUser !== "Esperando..."){
-            const buttonEl = container.querySelector('button-el') as HTMLElement;
-            buttonEl!.style.display = 'inherit';
-            
-            buttonEl.addEventListener('click', this.handleReadyClick);
-        }
 
         this.shadow.innerHTML = ''; // Limpiar el shadow DOM antes de redibujar
         this.shadow.appendChild(container);
