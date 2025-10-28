@@ -1,4 +1,4 @@
-import { rtdb, ref, onValue } from './rtdb';
+import { rtdb, ref, onValue, onDisconnect, set } from './rtdb';
 
 const API_BASE_URL = "http://localhost:3000";
 
@@ -218,39 +218,69 @@ const state = { // Creamos nuestro state
             return null; // En caso de que no sea un 400 sino que sea otra cosa, enviamos otra cosa
         }
     },
-    async getRoomInfo(roomId: string){
-        const response = await fetch(API_BASE_URL + `/rooms/${roomId}`);
+    async getRoomInfo(roomId: string){ // Creamos un metodo que nos permitira obtener la data en tiempo real de la rtdb
+        const response = await fetch(API_BASE_URL + `/rooms/${roomId}`); // Hacemos un get a la room con la roomId recibida
 
-        const rtdbRes = await response.json();
+        const rtdbRes = await response.json(); // Esperamos la respuesta y la hacemos un json
 
-        const rtdbRoomRef = ref(rtdb, `/rooms/${rtdbRes.rtdbRoomId}`);
+        const rtdbRoomRef = ref(rtdb, `/rooms/${rtdbRes.rtdbRoomId}`); // Obtenemos la referencia en la ruta con el id largo
 
         onValue(rtdbRoomRef, (snapshot) => {
             if (snapshot.exists()) {
                 const roomData = snapshot.val();
-                const currentState = this.getState()
+                const currentState = this.getState(); 
+                
+                // Usamos el ID del state local para saber el rol en la DB de la sala.
+                const localUserId = currentState.play.player1?.id;
+                
+                // Si el ID de la DB no existe, hay un error de sincronización, salimos.
+                if (!localUserId) return; 
 
-                if(roomData.player1.userId === currentState.play.player1!.id){
-                    this.setState({
-                        play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
-                            player2: roomData.player2
-                        },
-                        
-                        roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
-                    });
+                // Validamos si el userId del player1 de la rtdb es igual al local
+                const isLocalUserP1_inDB = roomData.player1.userId === localUserId;
+                
+                // Mapear los datos de la DB al State Local:
+                let opponentData = null;
+                
+                if (isLocalUserP1_inDB) {
+                    // Si es P1 en la DB. Oponente es P2 de la DB.
+                    opponentData = roomData.player2;
                 } else {
-                    this.setState({
-                        play: { // Los jugadores van anidados en 'play' para que setState los mezcle correctamente
-                            player2: roomData.player1
-                        },
-                        
-                        roundStatus: roomData.roundStatus // roundStatus lo ponemos a este nivel para que se mezcle con ...this.data
-                    });
+                    // Si se es P2 en la DB. EL oponente es P1 de la DB.
+                    opponentData = roomData.player1;
                 }
+
+                // Mantenemos al player1 local y actualizamos al oponente y el status
+                this.setState({
+                    // play.player1 NO se actualiza aquí, ya que se hizo en logInPlayer/registerPlayer.
+                    // play.player2 recibe los datos del oponente.
+                    play: {
+                        player2: opponentData // Solo actualizamos al oponente
+                    },
+                    roundStatus: roomData.roundStatus // Actualizamos el estado de la ronda
+                });
+
             } else {
-                console.error("La RTDB no existe")
+                console.error("La RTDB no existe");
             }
         });
+    },
+    async setPlayerOnline(rtdbPlayerPath: string){
+        // La ruta debe ser específica para la sala y el jugador: /rooms/ID_LARGO/playerX/online
+        const playerOnlineRef = ref(rtdb, rtdbPlayerPath);
+
+        // 1. Decirle a Firebase: "Si mi conexión se cae, establece esta referencia a 'false'"
+        onDisconnect(playerOnlineRef).set(false)
+            .then(() => {
+                // 2. Establecer el estado actual como CONECTADO (true)
+                // Esto solo se ejecuta si onDisconnect se registró correctamente.
+                set(playerOnlineRef, true);
+                
+                console.log("Presencia registrada. Jugador en línea.");
+            })
+            .catch(error => {
+                console.error("Error al registrar la presencia:", error);
+            });
     }
 }
 
