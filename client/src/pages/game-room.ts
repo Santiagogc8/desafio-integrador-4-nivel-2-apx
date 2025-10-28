@@ -93,6 +93,7 @@ class GameRoom extends HTMLElement{
 
             button-el{
                 width: 100%;
+                display: none;
             }
 
             .selection__container{
@@ -111,6 +112,11 @@ class GameRoom extends HTMLElement{
                 width: clamp(68px, 8.5vw, 97px);;
             }
         `
+
+        if(otherUser !== "Esperando..."){
+            const buttonEl = container.querySelector('button-el') as HTMLElement;
+            buttonEl!.style.display = 'inherit';
+        }
 
         this.shadow.innerHTML = ''; // Limpiar el shadow DOM antes de redibujar
         this.shadow.appendChild(container);
