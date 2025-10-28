@@ -126,6 +126,10 @@ app.patch('/rooms/:roomId', async (req, res)=>{
             const rtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId).get(); // E intenta obtener la ref de la rtdb en la ruta que le pasamos
 
             if(rtdbRoomRef.exists){ // Si la referencia de la rtdb existe
+                if(rtdbRoomRef.val().owner === userId){
+                    res.json({message: "this is the room owner"});
+                    return
+                }
                 if(!rtdbRoomRef.val().player2){ // Valida si NO tiene un valor player2 (o sea, que esta vacia)
                     const newRtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId) // Crea una nueva referencia de la rtdb
                     newRtdbRoomRef.update({ // Y le hace un update
@@ -137,17 +141,22 @@ app.patch('/rooms/:roomId', async (req, res)=>{
                         roundStatus: "waiting selections"
                     })
                     res.status(200).json({message: "updated"}); // Y envia una respuesta con estado 200
+                    return
                 } else { // En caso de que player2 exista en la referencia de la rtdb (esta llena la sala)
                     res.status(403).json({error: 'the room is full'}); // Envia un estado 403 y yun mensaje
+                    return
                 }
             } else { // En caso de que la referencia de la rtdb no exista
                 res.status(404).json({error: 'room not found'}); // Enviamos un 404
+                return
             }
         } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
             res.status(404).json({error: 'room not found'}); // Enviamos un 404
+            return
         }
     } else{
         res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
+        return
     }
 });
 

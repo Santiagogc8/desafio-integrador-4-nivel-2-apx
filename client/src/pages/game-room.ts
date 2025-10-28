@@ -112,7 +112,7 @@ class GameRoom extends HTMLElement{
             }
         `
 
-        this.shadow.innerHTML = ''; // 💡 Limpiar el shadow DOM antes de redibujar
+        this.shadow.innerHTML = ''; // Limpiar el shadow DOM antes de redibujar
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
     }

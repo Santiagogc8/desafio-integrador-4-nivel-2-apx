@@ -129,8 +129,6 @@ class NewGame extends HTMLElement{
 
         const currentState = state.getState(); // Obtenemos el currentState
 
-        console.log(currentState)
-
         const newRoomBtn = container.querySelector('.new') as HTMLElement;
         const existingRoomBtn = container.querySelector('.existing') as HTMLElement;
         const form = container.querySelector('form');
@@ -158,6 +156,11 @@ class NewGame extends HTMLElement{
             const pServerResponseEl = container.querySelector('#server-response') as HTMLParagraphElement;
 
             const res = await state.joinRoom(userId, input.value);
+
+            if(res === "this is the room owner"){
+                Router.go(`/room/${input.value}`);
+                return;
+            }
 
             if(res === "updated"){
                 Router.go(`/room/${input.value}`);
