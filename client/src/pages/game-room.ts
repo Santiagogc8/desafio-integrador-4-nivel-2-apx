@@ -50,7 +50,30 @@ class GameRoom extends HTMLElement{
         const container = document.createElement('div');
         container.classList.add('welcome__container');
 
-        if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
+        if(currentState.roundScore){
+            const player1Choice = currentState.play.player1?.choice;
+            const player2Choice = currentState.play.player2?.choice;
+
+            container.innerHTML = `
+                <selection-el image="${player1Choice}"></selection-el>
+                <selection-el image="${player2Choice}"></selection-el>
+
+                <div>
+                    <star-result score="${currentState.roundScore}"></star-result>
+                    <div class="history">
+                        <p>${thisUser}: 0</p>
+                        <p>${otherUser}: 0</p>
+                    </div>
+                    <button id="new-round">Nueva ronda</button>
+                </div>
+            `
+
+            container.querySelector('#new-round')?.addEventListener('click', ()=>{
+                state.setState({roundScore: null})
+            });
+
+        } else {
+            if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
             container.innerHTML = `
                 <counter-el count="3"></counter-el>
                 <div class='selection__container'>
@@ -87,7 +110,7 @@ class GameRoom extends HTMLElement{
 
             // Solo al terminar el contador se registra la jugada y se elimina el listener
             container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
-                state.sendPlay(window.location.href.slice(-6), lastSelectedMove)
+                state.sendPlay(window.location.href.slice(-6), lastSelectedMove);
                 container.removeEventListener("selection-info", handleSelection); // Y removemos el eventListener
             });
 
@@ -115,6 +138,7 @@ class GameRoom extends HTMLElement{
                 
                 buttonEl.addEventListener('click', this.handleReadyClick);
             }
+        }
         }
 
         const style = document.createElement('style')

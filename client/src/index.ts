@@ -10,3 +10,4 @@ import './pages/game-room'
 import './components/selection-el';
 import './components/button-el';
 import './components/counter-el';
+import './components/star-result';

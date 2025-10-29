@@ -7,20 +7,19 @@ interface StateData {
         player1: {
             username: string;
             userId: string; // Asumimos que también guardamos el ID
-            isReady: boolean
+            isReady: boolean;
+            choice: string;
         } | null;
         player2: {
             username: string;
             userId: string;
-            isReady: boolean
+            isReady: boolean;
+            choice: string;
         } | null;
     };
     // 💡 Propiedad que faltaba en la definición inicial
-    roundStatus: string; 
-    // 💡 Podemos agregar el shortRoomId y rtdbRoomId para referencia
-    shortRoomId?: string;
-    rtdbRoomId?: string; 
-    // ... otras propiedades que quieras que sean tipadas
+    roundStatus: string;
+    roundScore: string | null;
 }
 
 const state = { // Creamos nuestro state
@@ -267,6 +266,8 @@ const state = { // Creamos nuestro state
                     roundStatus: roomData.roundStatus // Actualizamos el estado de la ronda
                 });
 
+                console.log(this.getState())
+
             } else {
                 console.error("La RTDB no existe");
             }
@@ -332,6 +333,7 @@ const state = { // Creamos nuestro state
     async sendPlay(roomId: string, choice: string){
         const currentState = this.getState(); // Obtenemos el estado actual
         const userId = currentState.play.player1?.userId;
+        const username = currentState.play.player1?.username;
 
         console.log(choice)
 
@@ -346,7 +348,23 @@ const state = { // Creamos nuestro state
 
         const response = await res.json();
 
-        if(res.ok) response.message;
+        if(res.ok){
+            let roundScore;
+
+            if(response.message === 'tie'){
+                roundScore = 'empate';
+            } else if(response.message === username){
+                roundScore = 'ganaste';
+            } else if(response.message !== username){
+                roundScore = 'perdiste'
+            } else {
+                roundScore = 'incompleto';
+            }
+
+            this.setState({
+                roundScore
+            });
+        };
 
         if(res.status === 404) response.error;
 

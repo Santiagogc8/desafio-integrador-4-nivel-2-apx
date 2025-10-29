@@ -139,7 +139,7 @@ app.patch('/rooms/:roomId', async (req, res)=>{
                             choice: null
                         },
                         roundStatus: "waiting selections"
-                    })
+                    });
                     res.status(200).json({message: "updated"}); // Y envia una respuesta con estado 200
                     return
                 } else { // En caso de que player2 exista en la referencia de la rtdb (esta llena la sala)
@@ -217,9 +217,9 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                 // La logica utilizada por el lado de escoger al ganador fue la siguiente:
                 // Lo mas "seguro" para evitar trampas es directamente hacer el resultado desde el back
 
-                if(rulesMap[player1Choice] === player2Choice) winner = "player1"; // Entonces primero validamos si lo que selecciono el player1 en el mapa, es igual a lo que contiene el player2 en su seleccion. De ser asi, significa que el player1 gano. Por lo que cambiamos la variable winner
+                if(rulesMap[player1Choice] === player2Choice) winner = updatedRoomData.player1.username; // Entonces primero validamos si lo que selecciono el player1 en el mapa, es igual a lo que contiene el player2 en su seleccion. De ser asi, significa que el player1 gano. Por lo que cambiamos la variable winner
 
-                if(rulesMap[player2Choice] === player1Choice) winner = "player2"; // en caso de que lo que escogio el player2 sea igual en el mapa a lo que escogio el player1, gana player2 y cambiamos la variable winner
+                if(rulesMap[player2Choice] === player1Choice) winner = updatedRoomData.player2.username; // en caso de que lo que escogio el player2 sea igual en el mapa a lo que escogio el player1, gana player2 y cambiamos la variable winner
 
                 const historyEntry = { // Creamos un entry
                     player1Choice,
@@ -236,7 +236,9 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                     roundStatus: 'waiting selections', // Cambia el estado para que puedan volver a jugar
                     // Reiniciamos la selección de los jugadores a null
                     'player1/choice': null, // Usa la notación de ruta anidada
+                    'player1/isReady': false,
                     'player2/choice': null,
+                    'player2/isReady': false,
                     winner: null // Limpiamos el campo 'winner' que no es necesario
                 });
 
