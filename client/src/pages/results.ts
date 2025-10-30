@@ -76,42 +76,104 @@ class ResultsPage extends HTMLElement {
         console.log(currentState)
 
         const roundResult = currentState.roundScore || 'incompleto'; // Resultado de la última ronda
+
+        const backgroundColors: { [key: string]: string } = {
+            // Establecemos un mapa con los colores de fondo por cada valor
+            ganaste: "var(--win-bg)",
+            perdiste: "var(--loose-bg)",
+            empate: "var(--draw-bg)",
+        };
         
         const style = document.createElement('style');
         style.textContent = `
-            .results-container {
+            .other-player{
+                position: absolute;
+                top: -20px;
+                width: 300px;
+                height: 400px;
+                left: 50%;
+                transform: translateX(-50%) rotate(180deg);
+            }
+
+            .this-player{
+                position: absolute;
+                bottom: -20px;
+                width: 300px;
+                height: 400px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .result__fallback{
+                min-height: 100vh;
                 display: flex;
                 flex-direction: column;
+                justify-content: center;
                 align-items: center;
-                gap: 50px;
-                padding: 20px;
+                gap: 40px;
+            }
+
+            button-el{
+                width: 340px;
+            }
+
+            h4{
                 text-align: center;
-                min-height: 100vh;
-                justify-content: space-between;
-            }
-            .score-title {
                 font-size: 40px;
-                font-weight: 700;
-                color: #000;
-                margin-bottom: 20px;
             }
-            .score-board {
-                width: 300px;
-                max-width: 90%;
-                padding: 20px;
-                border: 10px solid #000;
+
+            .results-container{
+                background-color: ${backgroundColors[roundResult] || "var(--draw-bg)"};
+                position: absolute;
+                inset: 0;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 20px;
+                font-family: "Cabin", sans-serif;
+            }
+
+            .score-board{
+                width: 100%;
+                max-width: 326px;
+                background-color: white;
+                border: 10px solid black;
                 border-radius: 10px;
-                background-color: #fff;
+                padding: 20px;
             }
-            .score-item {
+
+            .score-item{
+                margin: 20px;
+                margin-left: 0;
                 display: flex;
-                justify-content: space-between;
-                font-size: 28px;
-                font-weight: 500;
-                margin: 10px 0;
+                justify-content: space-around;
             }
-            .controls {
-                margin-top: 50px;
+
+            .score-title{
+                font-size: 40px;
+                text-align: center;
+            }
+
+            .score-board span{
+                font-size: 30px;
+                text-align: end;
+            }
+
+            .play-again{
+                width: 100%;
+                max-width: 326px;
+                height: 87px;
+                border: 10px solid var(--dark-btn-blue);
+                border-radius: 10px;
+                color: var(--light-btn-font);
+                background-color: var(--light-btn-blue);
+                font-family: "Cabin", sans-serif;
+                font-size: 30px;
+            }
+
+            .play-again:hover{
+                cursor: pointer;
             }
         `;
 
@@ -119,35 +181,67 @@ class ResultsPage extends HTMLElement {
         const score1 = this.score ? this.score.player1 : 0;
         const score2 = this.score ? this.score.player2 : 0;
 
+        if(currentState.play.player1!.restartRequested){
+            this.innerHTML = `
+                <div class="results-container" style="display: flex;">
+                    <h2>Esperando al otro jugador</h2>
+                </div>
+            `
+            this.appendChild(style);
+            return
+        }
+
+        if(!currentState.play.player1!.restartRequested && currentState.localMessage === "Esperando reinicio del otro jugador"){
+            this.innerHTML = `
+                <div class="results-container" style="display: flex;">
+                    <h2>El otro jugador esta listo!</h2>
+                    <button class="play-again">¡Volver a jugar!</button>
+                </div>
+            `
+            this.appendChild(style);
+
+            const playAgainButton = this.querySelector('.play-again');
+            playAgainButton?.addEventListener('click', this.handlePlayAgain);
+
+            return
+        }
+
         this.innerHTML = `
-            <div class="results-container">
-                <div>
-                    <star-result result="${roundResult}"></star-result>
-                </div>
-                
-                <div class="score-board">
-                    <h2 class="score-title">Score</h2>
-                    <div class="score-item">
-                        <span>${this.player1Name}</span>
-                        <span>${score1}</span>
+                <selection-el class="this-player" image=${currentState.play.player1?.choice}></selection-el>
+                <selection-el class="other-player" image=${currentState.play.player2?.choice}></selection-el>
+
+                <div class="results-container">
+                    <div>
+                        <star-result score="${roundResult}"></star-result>
                     </div>
-                    <div class="score-item">
-                        <span>${this.player2Name}</span>
-                        <span>${score2}</span>
+                    
+                    <div class="score-board">
+                        <h2 class="score-title">Score</h2>
+                        <div class="score-item">
+                            <span>${this.player1Name}:   </span>
+                            <span>${score1}</span>
+                        </div>
+                        <div class="score-item">
+                            <span>${this.player2Name}:   </span>
+                            <span>${score2}</span>
+                        </div>
                     </div>
+
+                    <button class="play-again">¡Volver a jugar!</button>
                 </div>
+            `;
 
-                <div class="controls">
-                    <button-el class="play-again" text="¡Volver a jugar!"></button-el>
-                </div>
-            </div>
-        `;
+            setTimeout(() => { // Establecemos un timeout de 2 segundos
+                const result = this.querySelector(".results-container") as HTMLElement; // Seleccionamos el .result
+                result!.style.display = "flex"; // Y le cambiamos el style a flex
+            }, 2000);
 
-        this.appendChild(style);
 
-        // Agregamos el listener para el botón
-        const playAgainButton = this.querySelector('.play-again');
-        playAgainButton?.addEventListener('click', this.handlePlayAgain);
+            this.appendChild(style);
+
+            // Agregamos el listener para el botón
+            const playAgainButton = this.querySelector('.play-again');
+            playAgainButton?.addEventListener('click', this.handlePlayAgain);
     }
 }
 

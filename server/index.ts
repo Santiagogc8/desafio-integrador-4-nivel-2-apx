@@ -90,7 +90,7 @@ app.post('/rooms', async (req, res)=>{
         do{ // Ejecutamos un do donde
             shortId = uuidv4().slice(0, 6).toUpperCase(); // Establecemos un id alfanumerico aleatorio y lo cortamos desde la posicion 0 hasta la 6 y lo guardamos en la variable shortId
 
-            roomDoc = await roomsCollection.doc(shortId).get(); // Buscamos si existe una room con el shortId recibido y la obtenemos y lo guardamos en roomDoc
+            roomDoc = await roomsCollection.doc(shortId).get(); // Buscamos si existe una room con el shortId recibido y la obtiene y lo guardamos en roomDoc
 
             if(!roomDoc.exists){ // Si el roomDoc no existe
                 roomsCollection.doc(shortId).set({ // Creamos un documento en la roomsCollection de firestore con el shortId y lo seteamos 
@@ -170,7 +170,7 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
     const {userId, choice} = req.body; // Obtenemos el userId y la seleccion del usuario del body
     const {roomId} = req.params; // Y obtenemos el roomId de los parametros
 
-    if(!userId) res.status(400).json({error: "an userId was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
+    if(!userId) return res.status(400).json({error: "an userId was expected"}) // Si no recibimos un userId en el body, enviamos un 400 y un mensaje de error como respuesta
 
     const searchUser = await usersCollection.doc(userId).get(); // Buscamos al usuario en la userCollection y le hacemos un get
 
@@ -182,9 +182,29 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
             const rtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId).get(); // E intenta obtener la ref de la rtdb en la ruta que le pasamos
             const roomData = rtdbRoomRef.val(); // Guardamos la data de la room en la rtdb
 
+            // Verificar si la ronda ya está en estado 'show results'
+            if(roomData.roundStatus === "show results"){
+                // Si ya está en show results, devolver el ganador actual sin procesar nada más
+                let winner = "tie";
+                if(roomData.player1?.choice && roomData.player2?.choice) {
+                    const rulesMap = {
+                        piedra: "tijeras",
+                        papel: "piedra",
+                        tijeras: "papel"
+                    };
+                    
+                    if(rulesMap[roomData.player1.choice] === roomData.player2.choice) 
+                        winner = roomData.player1.username;
+                    
+                    if(rulesMap[roomData.player2.choice] === roomData.player1.choice) 
+                        winner = roomData.player2.username;
+                }
+                
+                return res.json({winner: winner});
+            }
+
             if(roomData.roundStatus !== "waiting selections"){ // Validamos si el roundStatus es diferente a wating selections
-                res.status(400).json("you cannot make moves yet"); // En caso afirmativo, enviamos un error 400
-                return; // Y terminamos la funcion
+                return res.status(400).json({error: "you cannot make moves yet"}); // En caso afirmativo, enviamos un error 400
             }
 
             if(roomData.player1.userId === userId){ // Validamos si la propiedad userId del player1 en la rtdb es igual al que nos pasaron
@@ -198,7 +218,7 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                 await newRtdbRoomRef.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
             } 
             else { // En caso de que ningun userId sea el que recibimos
-                res.status(400).json({error: "userId not valid"}); // enviamos un error
+                return res.status(400).json({error: "userId not valid"}); // enviamos un error
             }
 
             const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val(); // Obtenemos la data actualizada del roomRef y accedemos a su valor
@@ -208,68 +228,126 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
 
             // Sobre la data de la room actualizada, entramos a la propiedad choice de cada player y validamos que no sea null (para que podamos establecer los resultados)
             if(player1Choice && player2Choice){
+                // Verificar si ya se ha procesado esta ronda (verificación adicional)
+                const roomRef = rtdb.ref('/rooms/'+rtdbRoomId);
+                const roomSnapshot = await roomRef.get();
+                const currentRoomData = roomSnapshot.val();
+                
+                // Si el roundStatus ya es 'show results', significa que esta ronda ya fue procesada por otra solicitud
+                if (currentRoomData.roundStatus === 'show results') {
+                    // Determinar el ganador basado en las elecciones actuales
+                    const rulesMap = {
+                        piedra: "tijeras",
+                        papel: "piedra",
+                        tijeras: "papel"
+                    };
+                    
+                    let winner = "tie";
+                    if(rulesMap[player1Choice] === player2Choice) 
+                        winner = updatedRoomData.player1.username;
+                    
+                    if(rulesMap[player2Choice] === player1Choice) 
+                        winner = updatedRoomData.player2.username;
+                    
+                    return res.json({winner: winner});
+                }
+                
                 const rulesMap = { // Establecemos las reglas del juego
                     piedra: "tijeras", // La piedra le gana a las tijeras
                     papel: "piedra", // El papel a la piedra
                     tijeras: "papel" // Y las tijeras al papel
                 }
-
-                const player1Choice = updatedRoomData.player1.choice; // Guardamos la seleccion del player1
-                const player2Choice = updatedRoomData.player2.choice; // y la seleccion del player2
+            
                 let winner = "tie"; // Y declaramos una variable winner que inicializamos en "tie" y cambiara dependiendo del resultado
-
+            
                 // La logica utilizada por el lado de escoger al ganador fue la siguiente:
                 // Lo mas "seguro" para evitar trampas es directamente hacer el resultado desde el back
-
+            
                 if(rulesMap[player1Choice] === player2Choice) winner = updatedRoomData.player1.username; // Entonces primero validamos si lo que selecciono el player1 en el mapa, es igual a lo que contiene el player2 en su seleccion. De ser asi, significa que el player1 gano. Por lo que cambiamos la variable winner
-
+            
                 if(rulesMap[player2Choice] === player1Choice) winner = updatedRoomData.player2.username; // en caso de que lo que escogio el player2 sea igual en el mapa a lo que escogio el player1, gana player2 y cambiamos la variable winner
-
-                const historyEntry = { // Creamos un entry
-                    player1Choice,
-                    player2Choice,
-                    winner,
-                    date: Date.now()
-                }
-
-                let winnerKey: "player1" | "player2" | "tie";
-
-                if (winner === updatedRoomData.player1.username) {
-                    winnerKey = "player1";
-                } else if (winner === updatedRoomData.player2.username) {
-                    winnerKey = "player2";
-                } else {
-                    winnerKey = "tie"; 
-                }
-
-                const winnerScorePath = `score.${winnerKey}`;
-
-                const updateData = {
-                    history: FieldValue.arrayUnion(historyEntry)
-                };
-
-                // 2. Incrementar solo si no es empate (ahora la validación es robusta)
-                if (winnerKey !== "tie") { 
-                    updateData[winnerScorePath] = FieldValue.increment(1);
-                }
-
-                await roomsCollection.doc(roomId).update(updateData);
-
+            
+                // Primero actualizar el estado en la RTDB para evitar que otra solicitud procese la misma ronda
                 await rtdb.ref('/rooms/'+rtdbRoomId).update({
-                    roundStatus: 'show results', // Cambia el estado para que puedan volver a jugar
+                    roundStatus: 'show results' // Cambia el estado para que puedan volver a jugar
                 });
-
-                return res.json({winner: historyEntry.winner});
+            
+                // Usar una transacción de Firestore para garantizar operaciones atómicas
+                try {
+                    // Usar una marca de tiempo única para esta transacción
+                    const transactionTimestamp = Date.now();
+                    
+                    await firestore.runTransaction(async (transaction) => {
+                        // Leer el documento actual dentro de la transacción
+                        const roomDocRef = roomsCollection.doc(roomId);
+                        const roomSnapshot = await transaction.get(roomDocRef);
+                        
+                        if (!roomSnapshot.exists) {
+                            throw new Error('Room not found');
+                        }
+                        
+                        const roomData = roomSnapshot.data();
+                        const history = roomData.history || [];
+                        
+                        // Verificar si ya existe una entrada con el mismo timestamp (dentro de un margen de 10 segundos)
+                        // Esto es una verificación adicional para evitar duplicados
+                        const recentEntries = history.filter(entry => 
+                            Math.abs(entry.date - transactionTimestamp) < 10000
+                        );
+                        
+                        if (recentEntries.length > 0) {
+                            // Ya existe una entrada reciente, no hacer nada
+                            return;
+                        }
+                        
+                        // Crear una nueva entrada en el historial con el timestamp único
+                        const historyEntry = {
+                            player1Choice,
+                            player2Choice,
+                            winner,
+                            date: transactionTimestamp
+                        };
+                        
+                        let winnerKey: "player1" | "player2" | "tie";
+                        
+                        if (winner === updatedRoomData.player1.username) {
+                            winnerKey = "player1";
+                        } else if (winner === updatedRoomData.player2.username) {
+                            winnerKey = "player2";
+                        } else {
+                            winnerKey = "tie";
+                        }
+                        
+                        // Preparar las actualizaciones
+                        const newHistory = [...history, historyEntry];
+                        const updates = { history: newHistory };
+                        
+                        // Incrementar el puntaje si no es empate
+                        if (winnerKey !== "tie") {
+                            const currentScore = roomData.score || { player1: 0, player2: 0 };
+                            currentScore[winnerKey] += 1;
+                            (updates as any).score = currentScore;
+                        }
+                        
+                        // Aplicar las actualizaciones en la transacción
+                        transaction.update(roomDocRef, updates);
+                    });
+                    
+                    return res.json({winner: winner});
+                } catch (error) {
+                    console.error('Error en la transacción:', error);
+                    return res.status(500).json({error: 'Error al procesar la jugada'});
+                }
             } else { // Si solo un jugador ha jugado
-                res.status(200).json({ // Envia un estado 200 y un mensaje
+                return res.status(200).json({ // Envia un estado 200 y un mensaje
                     message: "play recorded, waiting for the opponent..."
                 })
             }
         } else { // Y en caso de que el shortId no se encuentre en la roomsCollection
-            res.status(404).json({error: 'room not found'}); // Enviamos un 404
+            return res.status(404).json({error: 'room not found'}); // Enviamos un 404
         }
     } else{
-        res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
+        return res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
     }
 });
 

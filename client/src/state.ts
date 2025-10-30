@@ -9,12 +9,14 @@ interface StateData {
             userId: string; // Asumimos que también guardamos el ID
             isReady: boolean;
             choice: string;
+            restartRequested: boolean;
         } | null;
         player2: {
             username: string;
             userId: string;
             isReady: boolean;
             choice: string;
+            restartRequested: boolean;
         } | null;
     };
     // 💡 Propiedad que faltaba en la definición inicial
