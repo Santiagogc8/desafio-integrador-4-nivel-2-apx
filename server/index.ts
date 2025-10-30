@@ -94,7 +94,11 @@ app.post('/rooms', async (req, res)=>{
 
             if(!roomDoc.exists){ // Si el roomDoc no existe
                 roomsCollection.doc(shortId).set({ // Creamos un documento en la roomsCollection de firestore con el shortId y lo seteamos 
-                    rtdbRoomId: rtdbRoomRef.key // Con el id largo de la rtdbRoomId como propiedad y la key de la referencia de la rtdb como valor
+                    rtdbRoomId: rtdbRoomRef.key, // Con el id largo de la rtdbRoomId como propiedad y la key de la referencia de la rtdb como valor
+                    score: { // Y un objeto score en 0
+                        player1: 0, 
+                        player2: 0
+                    }
                 });
             }
         } while(roomDoc.exists); // Se repite mientras que roomDoc exista
@@ -186,12 +190,12 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
             if(roomData.player1.userId === userId){ // Validamos si la propiedad userId del player1 en la rtdb es igual al que nos pasaron
                 const player1Ref = await rtdb.ref('/rooms/'+rtdbRoomId+'/player1'); // En caso afirmativo obtenemos la referencia del player 1
 
-                player1Ref.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
+                await player1Ref.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
             } 
             else if(roomData.player2.userId === userId){ // Validamos si la propiedad userId del player2 en la rtdb es igual al que nos pasaron
                 const newRtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId+'/player2'); // En caso afirmativo obtenemos la referencia del player 2
 
-                newRtdbRoomRef.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
+                await newRtdbRoomRef.update({choice: choice || null}); // Y updateamos el choice al valor recibido o null
             } 
             else { // En caso de que ningun userId sea el que recibimos
                 res.status(400).json({error: "userId not valid"}); // enviamos un error
@@ -228,21 +232,35 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                     date: Date.now()
                 }
 
-                await roomsCollection.doc(roomId).update({ // Y en la roomCollection obtenemos el documento con el roomId y le hacemos un update
-                    history: FieldValue.arrayUnion(historyEntry) // Le pasamos al history el arrayUnion con el historyEntry (es decir, hacemos un "push", con un metodo que ofrece firestore para no sustituir todo el array)
-                })
+                let winnerKey: "player1" | "player2" | "tie";
+
+                if (winner === updatedRoomData.player1.username) {
+                    winnerKey = "player1";
+                } else if (winner === updatedRoomData.player2.username) {
+                    winnerKey = "player2";
+                } else {
+                    winnerKey = "tie"; 
+                }
+
+                const winnerScorePath = `score.${winnerKey}`;
+
+                const updateData = {
+                    history: FieldValue.arrayUnion(historyEntry)
+                };
+
+                // 2. Incrementar solo si no es empate (ahora la validación es robusta)
+                if (winnerKey !== "tie") { 
+                    updateData[winnerScorePath] = FieldValue.increment(1);
+                }
+
+                await roomsCollection.doc(roomId).update(updateData);
 
                 await rtdb.ref('/rooms/'+rtdbRoomId).update({
-                    roundStatus: 'waiting selections', // Cambia el estado para que puedan volver a jugar
-                    // Reiniciamos la selección de los jugadores a null
-                    'player1/choice': null, // Usa la notación de ruta anidada
-                    'player1/isReady': false,
-                    'player2/choice': null,
-                    'player2/isReady': false,
-                    winner: null // Limpiamos el campo 'winner' que no es necesario
+                    roundStatus: 'show results', // Cambia el estado para que puedan volver a jugar
                 });
 
-                res.json({winner: historyEntry.winner})
+                console.log('El ganador es: ' + historyEntry.winner)
+                return res.json({winner: historyEntry.winner});
             } else { // Si solo un jugador ha jugado
                 res.status(200).json({ // Envia un estado 200 y un mensaje
                     message: "play recorded, waiting for the opponent..."
@@ -255,6 +273,90 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
         res.status(401).json({error: 'you are not authorized'}); // Enviamos un estado 401 que envia un mensaje de unauthorized
     }
 });
+
+app.patch('/rooms/:roomId/reset', async (req, res)=>{
+    const {userId} = req.body; 
+    const {roomId} = req.params; 
+
+    if(!userId) return res.status(400).json({error: "an userId was expected"});
+
+    const searchUser = await usersCollection.doc(userId).get();
+    if(!searchUser.exists) return res.status(404).json({error: "User not found"});
+
+    const searchShortRoom = await roomsCollection.doc(roomId).get(); 
+    if(!searchShortRoom.exists) return res.status(404).json({error: "Room not found in Firestore"});
+    
+    const rtdbRoomId = searchShortRoom.data().rtdbRoomId;
+    const rtdbRoomRef = await rtdb.ref('/rooms/'+rtdbRoomId).get();
+    const roomData = rtdbRoomRef.val();
+
+    // 2. **Guard Clause (Ajustar el string del estado)**
+    // Usaremos el string que usaste: "show results" para esta comprobación.
+    if(roomData.roundStatus !== "show results"){ 
+        return res.status(400).json({message: "Cannot reset, results are not available or round is in progress."});
+    }
+
+    let playerKey: string;
+    let opponentKey: string;
+
+    if (roomData.player1.userId === userId) {
+        playerKey = 'player1';
+        opponentKey = 'player2';
+    } else if (roomData.player2 && roomData.player2.userId === userId) {
+        playerKey = 'player2';
+        opponentKey = 'player1';
+    } else {
+        // 💡 IMPORTANTE: Si el usuario existe pero no es P1 ni P2, error
+        return res.status(403).json({ error: "User is not a participant in this room." });
+    }
+
+    // 2. Establecer el flag de reinicio para el jugador que llama
+    await rtdb.ref('/rooms/'+rtdbRoomId).update({
+        [`${playerKey}/restartRequested`]: true // [playerKey] es sintaxis de propiedad dinámica
+    });
+
+    // 3. Obtener la data fresca para verificar al oponente
+    const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val();
+
+    // 4. Lógica de Ejecución
+    if (updatedRoomData[playerKey].restartRequested && updatedRoomData[opponentKey].restartRequested) {
+        
+        // 💡 Ejecutar el reseteo completo solo si AMBOS están listos
+        await rtdb.ref('/rooms/'+rtdbRoomId).update({
+            roundStatus: 'waiting selections', 
+            'player1/choice': null, 
+            'player1/isReady': null,
+            'player2/choice': null,
+            'player2/isReady': null,
+            'player1/restartRequested': false, // Limpiar el nuevo flag
+            'player2/restartRequested': false, // Limpiar el nuevo flag
+            winner: null 
+        });
+        
+        res.json({message: "New round started successfully."});
+
+    } else {
+        // 💡 El reseteo no se ejecuta, solo se registra la intención
+        res.json({message: "Waiting for opponent to click 'New Round'."});
+    }
+});
+
+app.get('/rooms/:roomId/metadata', async(req, res)=>{
+    const { roomId } = req.params
+
+    if(!roomId) return res.status(400).json({error: "roomId was expected"});
+
+    const roomRef = await roomsCollection.doc(roomId).get();
+
+    if(!roomRef.exists) return res.status(404).json({error: "room not found"});
+
+    const roomData = roomRef.data();
+
+    return res.json({
+        score: roomData.score,
+        history: roomData.history
+    })
+})
 
 // Obtener id largo rtdb
 app.get('/rooms/:roomId', async (req, res)=>{

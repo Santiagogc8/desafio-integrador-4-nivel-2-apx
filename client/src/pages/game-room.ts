@@ -36,109 +36,169 @@ class GameRoom extends HTMLElement{
         state.setPlayerReady(true, roomId);
     }
 
+    handleNewRoundClick = () => {
+        const roomId = window.location.href.slice(-6);
+        // Llama al State Manager para iniciar el flujo de reseteo
+        state.resetRoom(roomId); 
+    }
+
     async render(){
         const currentState = state.getState();
 
-        const roundStatus = currentState.roundStatus === "waiting player 2" ? "Esperando a player 2...": "Esperando a confirmacion";
-        const thisUser = currentState.play.player1?.username;
-        const otherUser = currentState.play.player2?.username || "Esperando...";
-
-        if(!thisUser){
-            Router.go('/');
+        // 1. Cláusula de Guardia para Sincronización y Usuario
+        if (!currentState.play.player1?.username) {
+            Router.go('/'); // Volver a la raíz si no hay usuario
+            return;
         }
 
+        // Si la data no está sincronizada, mostramos una carga rápida
+        if (currentState.synced === false) {
+            this.shadow.innerHTML = `<h2 style="color: grey;">Cargando sala...</h2>`;
+            return;
+        }
+
+        // Datos comunes para el HTML
+        const roomId = window.location.href.slice(-6);
+        const thisUser = currentState.play.player1.username;
+        const otherUser = currentState.play.player2?.username || "Esperando...";
+
+        // 2. Creación del Contenedor Principal
         const container = document.createElement('div');
         container.classList.add('welcome__container');
+        
+        // 3. Renderizado Condicional por Estado de Ronda
 
-        if(currentState.roundScore){
-            const player1Choice = currentState.play.player1?.choice;
-            const player2Choice = currentState.play.player2?.choice;
+        // ESTADO A: VISTA DE RESULTADOS (Highest Priority)
+        if (currentState.roundStatus === "show results"){
+            const scoreMessage = currentState.roundScore || "EMPATE"; // Usar 'empate' si no hay score
+            
+            // Creamos los elementos de resultado
+            const starEl = document.createElement('star-result');
+            starEl.setAttribute('score', scoreMessage.toLowerCase());
 
+            const newRoundBtn = document.createElement('button'); // Usamos un button simple
+            newRoundBtn.id = 'new-round';
+            newRoundBtn.textContent = 'Nueva ronda';
+            
+            const localMessageP = document.createElement('p');
+            localMessageP.id = 'local-message';
+            localMessageP.textContent = currentState.localMessage || "";
+
+
+            // Estructura de resultados
             container.innerHTML = `
-                <selection-el image="${player1Choice}"></selection-el>
-                <selection-el image="${player2Choice}"></selection-el>
-
                 <div>
-                    <star-result score="${currentState.roundScore}"></star-result>
                     <div class="history">
                         <p>${thisUser}: 0</p>
                         <p>${otherUser}: 0</p>
                     </div>
-                    <button id="new-round">Nueva ronda</button>
                 </div>
-            `
+            `;
+            
+            // 💡 Agregamos los componentes Custom
+            container.children[0].prepend(starEl);
+            container.children[0].appendChild(newRoundBtn);
+            container.children[0].appendChild(localMessageP);
 
-            container.querySelector('#new-round')?.addEventListener('click', ()=>{
-                state.setState({roundScore: null})
-            });
 
-        } else {
-            if(currentState.play.player1?.isReady && currentState.play.player2?.isReady){
-            container.innerHTML = `
-                <counter-el count="3"></counter-el>
-                <div class='selection__container'>
-                    <selection-el image="tijeras"></selection-el>
-                    <selection-el image="piedra"></selection-el>
-                    <selection-el image="papel"></selection-el>
-                </div>
-            `
+            // Lógica del botón de reseteo
+            if (currentState.localMessage?.includes("Esperando reinicio")) {
+                newRoundBtn.style.display = 'none';
+                localMessageP.style.display = 'inherit';
+            } else {
+                newRoundBtn.style.display = 'inherit';
+                localMessageP.style.display = 'none';
+            }
+            
+            newRoundBtn.addEventListener('click', this.handleNewRoundClick);
 
-            const allSelections = container.querySelectorAll("selection-el");
+        } 
+        
+        // ESTADO B: VISTA DE JUEGO (waiting selections/Contador)
+        else if (currentState.roundStatus === "waiting selections") {
 
-            let lastSelectedMove = "";
+            if(currentState.play.player1.isReady && currentState.play.player2!.isReady){
+                // VISTA CONTADOR
+                container.innerHTML = `
+                    <counter-el count="3"></counter-el>
+                    <div class='selection__container'>
+                        <selection-el image="tijeras"></selection-el>
+                        <selection-el image="piedra"></selection-el>
+                        <selection-el image="papel"></selection-el>
+                    </div>
+                `;
 
-            const handleSelection = (e: any) => {
-                const selectedMove = e.detail.selection; // Obtenemos el detail.selection
+                // Lógica de Listeners del Contador
+                const allSelections = container.querySelectorAll("selection-el");
+                let lastSelectedMove = "";
 
-                allSelections.forEach((element) => { // Por cada elemento de allSelections
-                    const image = element.shadowRoot?.querySelector("img"); // Obtenemos el shadow y la imagen
+                const handleSelection = (e: any) => {
+                    const selectedMove = e.detail.selection; // Obtenemos el detail.selection
 
-                    if (!image) return; // Si la imagen no es true, se termina la funcion
-                    image.style.transform = "scale(1)"; // Le damos estilos a todas las imagenes
-                    image.style.opacity = "0.5";
+                    allSelections.forEach((element) => { // Por cada elemento de allSelections
+                        const image = element.shadowRoot?.querySelector("img"); // Obtenemos el shadow y la imagen
 
-                    if (element.getAttribute("image") === selectedMove) { // Y a la imagen seleccionada le hacemos un estilo diferente
-                        image.style.transform = "scale(1.5)";
-                        image.style.opacity = "1";
-                    }
+                        if (!image) return; // Si la imagen no es true, se termina la funcion
+                        image.style.transform = "scale(1)"; // Le damos estilos a todas las imagenes
+                        image.style.opacity = "0.5";
+
+                        if (element.getAttribute("image") === selectedMove) { // Y a la imagen seleccionada le hacemos un estilo diferente
+                            image.style.transform = "scale(1.5)";
+                            image.style.opacity = "1";
+                        }
+                    });
+
+                    lastSelectedMove = selectedMove; // Establecemos el lastSelectedMove con el valor de selectedMove
+                };
+
+                container.addEventListener("selection-info", handleSelection);
+
+                container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
+                    state.sendPlay(roomId, lastSelectedMove);
+                    container.removeEventListener("selection-info", handleSelection);
+                    console.log('Cambie el valor de isCounting a FALSE en el EVENTO COUNTER FINISHED')
+                    state.setState({isCounting: false})
                 });
+            }            
+            // Si no están listos (la vista por defecto)
+            else {
+                container.innerHTML = `
+                    <h2>Esperando confirmación</h2>
+                    <div class="room-info">
+                        <div>
+                            <p id="this-player">${thisUser}</p>
+                            <p id="other-player">${otherUser}</p>
+                        </div>
+                        <p id="roomId">${roomId}</p>
+                    </div>
+                    <button-el class="new">Estoy listo</button-el>
+                    <div class='selection__container'>
+                        <selection-el image="tijeras"></selection-el>
+                        <selection-el image="piedra"></selection-el>
+                        <selection-el image="papel"></selection-el>
+                    </div>
+                `;
 
-                lastSelectedMove = selectedMove; // Establecemos el lastSelectedMove con el valor de selectedMove
-            };
-
-            container.addEventListener("selection-info", handleSelection); // Ejecutamos la funcion handleSelection en el evento selection-info
-
-            // Solo al terminar el contador se registra la jugada y se elimina el listener
-            container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
-                state.sendPlay(window.location.href.slice(-6), lastSelectedMove);
-                container.removeEventListener("selection-info", handleSelection); // Y removemos el eventListener
-            });
-
-        } else {
+                if(otherUser !== "Esperando..."){
+                    const buttonEl = container.querySelector('button-el') as HTMLElement;
+                    buttonEl!.style.display = 'inherit';
+                    buttonEl.addEventListener('click', this.handleReadyClick);
+                }
+            }
+        }
+        
+        // ESTADO C: VISTA INICIAL / ESPERA (waiting player 2)
+        else {
             container.innerHTML = `
-                <h2>${roundStatus}</h2>
+                <h2>${currentState.roundStatus}</h2>
                 <div class="room-info">
                     <div>
                         <p id="this-player">${thisUser}</p>
                         <p id="other-player">${otherUser}</p>
                     </div>
-                    <p id="roomId">${window.location.href.slice(-6)}</p>
+                    <p id="roomId">${roomId}</p>
                 </div>
-                <button-el class="new">Estoy listo</button-el>
-                <div class='selection__container'>
-                    <selection-el image="tijeras"></selection-el>
-                    <selection-el image="piedra"></selection-el>
-                    <selection-el image="papel"></selection-el>
-                </div>
-            `
-
-            if(otherUser !== "Esperando..."){
-                const buttonEl = container.querySelector('button-el') as HTMLElement;
-                buttonEl!.style.display = 'inherit';
-                
-                buttonEl.addEventListener('click', this.handleReadyClick);
-            }
-        }
+                `;
         }
 
         const style = document.createElement('style')
@@ -194,6 +254,10 @@ class GameRoom extends HTMLElement{
 
             selection-el:last-child{
                 width: clamp(68px, 8.5vw, 97px);;
+            }
+
+            #local-message{
+                display: none;
             }
         `
 

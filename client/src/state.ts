@@ -20,6 +20,8 @@ interface StateData {
     // 💡 Propiedad que faltaba en la definición inicial
     roundStatus: string;
     roundScore: string | null;
+    localMessage: string;
+    synced: boolean; // flag para control de carga
 }
 
 const state = { // Creamos nuestro state
@@ -29,6 +31,7 @@ const state = { // Creamos nuestro state
             player2: null
         },
         roundStatus: "initial", // Valor inicial de la ronda
+        synced: false, // Inicializamos en false
     } as StateData, 
     listeners: [] as any[], // Creamos el array de listeners
     initLocalStorage(){ // Creamos un metodo que inicializara el localStorage
@@ -240,33 +243,24 @@ const state = { // Creamos nuestro state
                 // Validamos si el userId del player1 de la rtdb es igual al local
                 const isLocalUserP1_inDB = roomData.player1.userId === localUserId;
                 const localPlayerData = isLocalUserP1_inDB ? roomData.player1 : roomData.player2;
-                
-                // Mapear los datos de la DB al State Local:
-                let opponentData = null;
-                
-                if (isLocalUserP1_inDB) {
-                    // Si es P1 en la DB. Oponente es P2 de la DB.
-                    opponentData = roomData.player2;
-                } else {
-                    // Si se es P2 en la DB. EL oponente es P1 de la DB.
-                    opponentData = roomData.player1;
-                }
+                const opponentData = isLocalUserP1_inDB ? roomData.player2 : roomData.player1;
 
                 // Mantenemos al player1 local y actualizamos al oponente y el status
                 this.setState({
-                    // play.player1 NO se actualiza aquí, ya que se hizo en logInPlayer/registerPlayer.
-                    // play.player2 recibe los datos del oponente.
                     play: {
                         player1: {
-                            ...localPlayerData,          // Añade/sobrescribe isReady, online, selection, etc.
-                            ...currentState.play.player1 // Mantiene username, id, etc.
+                            // Mantenemos la identidad (username/userId) del estado local
+                            // Este es el objeto que se crea al loguearse/registrarse
+                            ...currentState.play.player1,
+                            ...localPlayerData,
+                            isReady: localPlayerData.isReady
                         },
-                        player2: opponentData // Solo actualizamos al oponente
+                        player2: opponentData
                     },
-                    roundStatus: roomData.roundStatus // Actualizamos el estado de la ronda
+                    roundStatus: roomData.roundStatus,
+                    synced: true,
+                    localMessage: "" // Limpieza al sincronizar con la DB
                 });
-
-                console.log(this.getState())
 
             } else {
                 console.error("La RTDB no existe");
@@ -292,6 +286,9 @@ const state = { // Creamos nuestro state
     },
     async setPlayerReady(isReadyStatus: boolean, roomId: string){
         const currentState = this.getState();
+
+        this.setState({ synced: false });
+
         const response = await fetch(API_BASE_URL + `/rooms/${roomId}`); // Hacemos un get a la room con la roomId recibida
         const rtdbRes = await response.json();
         const rtdbRoomId = rtdbRes.rtdbRoomId
@@ -335,8 +332,6 @@ const state = { // Creamos nuestro state
         const userId = currentState.play.player1?.userId;
         const username = currentState.play.player1?.username;
 
-        console.log(choice)
-
         const res = await fetch(API_BASE_URL + `/rooms/${roomId}/play`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -351,24 +346,58 @@ const state = { // Creamos nuestro state
         if(res.ok){
             let roundScore;
 
-            if(response.message === 'tie'){
+            if(response.winner === 'tie'){
                 roundScore = 'empate';
-            } else if(response.message === username){
+            } else if(response.winner === username){
                 roundScore = 'ganaste';
-            } else if(response.message !== username){
+            } else if(response.winner !== username){
                 roundScore = 'perdiste'
             } else {
                 roundScore = 'incompleto';
             }
 
-            this.setState({
-                roundScore
-            });
+            if (roundScore !== 'incompleto') {
+                this.setState({
+                    roundScore: roundScore,
+                });
+            } else{
+                this.setState({
+                    roundScore: "incompleto",
+                });
+            }
         };
 
         if(res.status === 404) response.error;
 
         if(res.status === 401) response.error;
+    },
+    async resetRoom(roomId: string){
+        const currentState = this.getState();
+        const userId = currentState.play.player1?.userId;
+
+        this.setState({ synced: false });
+
+        const res = await fetch(API_BASE_URL+`/rooms/${roomId}/reset`,{
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        })
+
+        if(res.ok){
+            const response = await res.json();
+            const message = response.message;
+        
+            if (message.includes("New round started successfully.")) {
+                this.setState({ roundScore: null, localMessage: "" }); // Limpiamos el mensaje
+                console.log('Sala reseteada...');
+            } else {
+                // 💡 Si el reseteo NO se ejecutó, mostramos el mensaje localmente
+                this.setState({ roundScore: null, localMessage: "Esperando reinicio del otro jugador"}); 
+            }
+        } else{
+            const error = await res.json();
+            console.error("Error al resetear la sala:", error.message || error.error);
+        }
     }
 }
 
