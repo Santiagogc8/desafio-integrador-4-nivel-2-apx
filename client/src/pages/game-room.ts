@@ -118,9 +118,17 @@ class GameRoom extends HTMLElement{
         else if (currentState.roundStatus === "waiting selections") {
 
             if(currentState.play.player1.isReady && currentState.play.player2!.isReady){
+
+                if(currentState.isCounting === false) { 
+                    container.innerHTML = `
+                        
+                    `;
+                    return; // Salimos de la función render para mostrar solo este mensaje.
+                }
+
                 // VISTA CONTADOR
                 container.innerHTML = `
-                    <counter-el count="3"></counter-el>
+                    <counter-el count="4"></counter-el>
                     <div class='selection__container'>
                         <selection-el image="tijeras"></selection-el>
                         <selection-el image="piedra"></selection-el>
@@ -156,7 +164,6 @@ class GameRoom extends HTMLElement{
                 container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
                     state.sendPlay(roomId, lastSelectedMove);
                     container.removeEventListener("selection-info", handleSelection);
-                    console.log('Cambie el valor de isCounting a FALSE en el EVENTO COUNTER FINISHED')
                     state.setState({isCounting: false})
                 });
             }            

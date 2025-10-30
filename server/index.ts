@@ -259,7 +259,6 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                     roundStatus: 'show results', // Cambia el estado para que puedan volver a jugar
                 });
 
-                console.log('El ganador es: ' + historyEntry.winner)
                 return res.json({winner: historyEntry.winner});
             } else { // Si solo un jugador ha jugado
                 res.status(200).json({ // Envia un estado 200 y un mensaje

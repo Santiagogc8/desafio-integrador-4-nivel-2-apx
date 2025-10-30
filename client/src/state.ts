@@ -22,6 +22,7 @@ interface StateData {
     roundScore: string | null;
     localMessage: string;
     synced: boolean; // flag para control de carga
+    isCounting: boolean;
 }
 
 const state = { // Creamos nuestro state
@@ -32,6 +33,7 @@ const state = { // Creamos nuestro state
         },
         roundStatus: "initial", // Valor inicial de la ronda
         synced: false, // Inicializamos en false
+        isCounting: true
     } as StateData, 
     listeners: [] as any[], // Creamos el array de listeners
     initLocalStorage(){ // Creamos un metodo que inicializara el localStorage
@@ -287,8 +289,6 @@ const state = { // Creamos nuestro state
     async setPlayerReady(isReadyStatus: boolean, roomId: string){
         const currentState = this.getState();
 
-        this.setState({ synced: false });
-
         const response = await fetch(API_BASE_URL + `/rooms/${roomId}`); // Hacemos un get a la room con la roomId recibida
         const rtdbRes = await response.json();
         const rtdbRoomId = rtdbRes.rtdbRoomId
@@ -388,11 +388,18 @@ const state = { // Creamos nuestro state
             const message = response.message;
         
             if (message.includes("New round started successfully.")) {
-                this.setState({ roundScore: null, localMessage: "" }); // Limpiamos el mensaje
-                console.log('Sala reseteada...');
+                this.setState({ 
+                    roundScore: null, 
+                    localMessage: "",
+                    isCounting: true 
+                }); // Limpiamos el mensaje
             } else {
                 // 💡 Si el reseteo NO se ejecutó, mostramos el mensaje localmente
-                this.setState({ roundScore: null, localMessage: "Esperando reinicio del otro jugador"}); 
+                this.setState({ 
+                    roundScore: null, 
+                    localMessage: "Esperando reinicio del otro jugador",
+                    isCounting: true // <-- FIX: Esto asegura que la bandera local se resetee incluso si se está esperando al oponente.
+                }); 
             }
         } else{
             const error = await res.json();
