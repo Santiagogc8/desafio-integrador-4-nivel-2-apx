@@ -4,6 +4,7 @@ import { Router } from "@vaadin/router";
 class GameRoom extends HTMLElement{
     shadow: ShadowRoot;
     private unsubscribe!: () => void;
+    private playSent: boolean = false;
     
     constructor(){
         super();
@@ -74,6 +75,11 @@ class GameRoom extends HTMLElement{
 
         // ESTADO A: VISTA DE JUEGO (waiting selections/Contador)
         if (currentState.roundStatus === "waiting selections") {
+            
+            // 💡 REINICIO DE BANDERA: Si el estado vuelve a "contando", podemos enviar de nuevo.
+            if(currentState.isCounting){
+                this.playSent = false;
+            }
 
             if(currentState.play.player1.isReady && currentState.play.player2!.isReady){
 
@@ -121,6 +127,12 @@ class GameRoom extends HTMLElement{
                 container.addEventListener("selection-info", handleSelection);
 
                 container.querySelector('counter-el')?.addEventListener("counter-finished", () => {
+                    // 💡 CLÁUSULA DE GUARDIA: Previene el doble despacho
+                    if (this.playSent) {
+                        return;
+                    }
+                    this.playSent = true; // Marca como enviado inmediatamente
+
                     state.sendPlay(roomId, lastSelectedMove);
                     container.removeEventListener("selection-info", handleSelection);
                     state.setState({isCounting: false})

@@ -333,10 +333,30 @@ const state = { // Creamos nuestro state
         }
     },
     async sendPlay(roomId: string, choice: string){
-        const currentState = this.getState(); // Obtenemos el estado actual
+        const currentState = this.getState(); 
         const userId = currentState.play.player1?.userId;
         const username = currentState.play.player1?.username;
 
+        // 💡 1. GUARDIA DE ESTADO: Si ya tenemos una jugada registrada Y no estamos contando, abortar.
+        // Esto evita re-envíos si el servidor se toma su tiempo para actualizar la RTDB.
+        if (currentState.play.player1?.choice && currentState.isCounting === false) {
+            console.error("Intento de enviar la jugada duplicado. Abortando.");
+            return; 
+        }
+        
+        // 💡 2. ACTUALIZACIÓN LOCAL INMEDIATA: Cambiar el estado ANTES de la llamada a la red.
+        // Esto asegura que el componente GameRoom se re-renderice inmediatamente sin el contador.
+        this.setState({
+            play: {
+                player1: {
+                    ...currentState.play.player1,
+                    choice: choice, // Registrar la jugada localmente
+                }
+            },
+            isCounting: false // Detener el contador y la lógica de escucha de eventos
+        });
+
+        // La llamada a la API ocurre DESPUÉS de la actualización de estado local.
         const res = await fetch(API_BASE_URL + `/rooms/${roomId}/play`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
