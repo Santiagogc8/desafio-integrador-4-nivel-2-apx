@@ -27,9 +27,9 @@ class ResultsPage extends HTMLElement {
             Router.go('/');
             return;
         }
-        
+
         // Cargar los datos y suscribirse a los cambios
-        this.getResultsData();
+        // ⬇️ SE ELIMINA LA LLAMADA INMEDIATA A this.getResultsData();
         
         state.subscribe((data) => {
             
@@ -49,7 +49,13 @@ class ResultsPage extends HTMLElement {
                 this.render();
             }
         });
-        
+
+        // 🔑 CAMBIO CLAVE: Introducimos un retraso para que el backend tenga tiempo de 
+        // comitear la puntuación de la ronda actual antes de que la solicitemos.
+        setTimeout(() => {
+            this.getResultsData();
+        }, 500); // 💡 Espera 500ms
+
         this.render(); // Render inicial (mientras carga la data)
     }
 
@@ -123,7 +129,7 @@ class ResultsPage extends HTMLElement {
             }
 
             .results-container{
-                background-color: ${backgroundColors[roundResult] || "var(--draw-bg)"};
+                background-color: ${backgroundColors[roundResult] || "transparent"};
                 position: absolute;
                 inset: 0;
                 display: none;
@@ -181,20 +187,23 @@ class ResultsPage extends HTMLElement {
         const score1 = this.score ? this.score.player1 : 0;
         const score2 = this.score ? this.score.player2 : 0;
 
+        // 1. Caso: El jugador local ya solicitó un reinicio y está esperando al oponente.
         if(currentState.play.player1!.restartRequested){
             this.innerHTML = `
                 <div class="results-container" style="display: flex;">
-                    <h2>Esperando al otro jugador</h2>
+                    <h2 style="font-size: 30px;">Esperando al otro jugador...</h2>
                 </div>
             `
             this.appendChild(style);
             return
         }
 
-        if(!currentState.play.player1!.restartRequested && currentState.localMessage === "Esperando reinicio del otro jugador"){
+        // 2. Caso CORREGIDO: El oponente ya solicitó un reinicio (player2.restartRequested es true).
+        // El jugador local aún no ha solicitado el reinicio, por lo que ve este mensaje.
+        if(currentState.play.player2?.restartRequested){
             this.innerHTML = `
                 <div class="results-container" style="display: flex;">
-                    <h2>El otro jugador esta listo!</h2>
+                    <h2 style="font-size: 30px;">El otro jugador esta listo!</h2>
                     <button class="play-again">¡Volver a jugar!</button>
                 </div>
             `
@@ -206,6 +215,7 @@ class ResultsPage extends HTMLElement {
             return
         }
 
+        // 3. Caso: Mostrar resultados normales (ningún jugador ha solicitado reinicio aún).
         this.innerHTML = `
                 <selection-el class="this-player" image=${currentState.play.player1?.choice}></selection-el>
                 <selection-el class="other-player" image=${currentState.play.player2?.choice}></selection-el>
