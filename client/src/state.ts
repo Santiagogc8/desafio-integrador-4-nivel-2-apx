@@ -23,6 +23,7 @@ interface StateData {
     localMessage: string;
     synced: boolean; // flag para control de carga
     isCounting: boolean;
+    isLocalUserRTDB_P1: boolean | null;
 }
 
 const state = { // Creamos nuestro state
@@ -33,7 +34,8 @@ const state = { // Creamos nuestro state
         },
         roundStatus: "initial", // Valor inicial de la ronda
         synced: false, // Inicializamos en false
-        isCounting: true
+        isCounting: true,
+        isLocalUserRTDB_P1: null,
     } as StateData, 
     listeners: [] as any[], // Creamos el array de listeners
     initLocalStorage(){ // Creamos un metodo que inicializara el localStorage
@@ -242,8 +244,10 @@ const state = { // Creamos nuestro state
                 // Si el ID de la DB no existe, hay un error de sincronización, salimos.
                 if (!localUserId) return; 
 
-                // Validamos si el userId del player1 de la rtdb es igual al local
+                // 💡 Determinación del rol en la RTDB
                 const isLocalUserP1_inDB = roomData.player1.userId === localUserId;
+                
+                // Mapeo de datos: El usuario local siempre es P1 para la UI, el oponente siempre es P2
                 const localPlayerData = isLocalUserP1_inDB ? roomData.player1 : roomData.player2;
                 const opponentData = isLocalUserP1_inDB ? roomData.player2 : roomData.player1;
 
@@ -261,7 +265,8 @@ const state = { // Creamos nuestro state
                     },
                     roundStatus: roomData.roundStatus,
                     synced: true,
-                    localMessage: "" // Limpieza al sincronizar con la DB
+                    localMessage: "", // Limpieza al sincronizar con la DB
+                    isLocalUserRTDB_P1: isLocalUserP1_inDB
                 });
 
             } else {
@@ -370,6 +375,52 @@ const state = { // Creamos nuestro state
         if(res.status === 404) response.error;
 
         if(res.status === 401) response.error;
+    },
+    async getRoomMetadata(roomId: string): Promise<boolean>{
+        const res = await fetch(API_BASE_URL + `/rooms/${roomId}/metadata`); // Llamada al nuevo endpoint
+
+        if(res.ok){
+            const data = await res.json();
+            const currentState = this.getState();
+
+            const rawScore = data.score; // Score crudo: { player1: X, player2: Y } (roles RTDB)
+            
+            // Obtenemos el rol guardado
+            const isLocalUserRTDB_P1 = currentState.isLocalUserRTDB_P1; 
+
+            let mappedScore;
+
+            if (isLocalUserRTDB_P1 === true) {
+                // Caso 1: El usuario local es RTDB P1. El score se mapea directo.
+                mappedScore = {
+                    player1: rawScore.player1, // Score del jugador local
+                    player2: rawScore.player2  // Score del oponente
+                };
+            } else {
+                // Caso 2: El usuario local es RTDB P2. El score se invierte.
+                mappedScore = {
+                    player1: rawScore.player2, // Score del jugador local (era el P2 de RTDB)
+                    player2: rawScore.player1  // Score del oponente (era el P1 de RTDB)
+                };
+            }
+
+            this.setState({
+                globalScore: mappedScore, // 💡 Guardamos el score MAPEADO
+                history: data.history,
+                synced: true,
+            });
+            return true;
+        } else {
+            const error = await res.json();
+            console.error("Error al obtener la metadata de la sala:", error.error);
+            // Podrías establecer un mensaje de error local si es necesario
+            this.setState({
+                globalScore: null,
+                history: null,
+                localMessage: error.error || "No se pudo cargar la metadata de la sala."
+            });
+            return false;
+        }
     },
     async resetRoom(roomId: string){
         const currentState = this.getState();

@@ -21,7 +21,7 @@ class StarResult extends HTMLElement { // Creamos la clase que extiende de HTMLE
             </svg>
         `;
 
-		div.style.fontFamily = 'Odibee Sans, sans-serif'
+		div.style.fontFamily = 'Cabin", sans-serif'
 
         const svgPath = div.querySelector('svg')!.querySelector('path'); // Seleccionamos el path del svg
 

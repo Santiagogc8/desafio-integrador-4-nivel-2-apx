@@ -4,19 +4,29 @@ import { Router } from "@vaadin/router";
 class GameRoom extends HTMLElement{
     shadow: ShadowRoot;
     private unsubscribe!: () => void;
+    
     constructor(){
         super();
         this.shadow = this.attachShadow({"mode": "open"});
     }
 
     connectedCallback(){
-        // 1. INICIAMOS el listener de la RTDB (Solo una vez)
-        // Esto empieza el flujo de datos: RTDB -> state.setState()
-        state.getRoomInfo(window.location.href.slice(-6)); 
+        // 1. INICIAMOS el listener de la RTDB
+        // Ojo: Se mantiene el window.location.href.slice(-6), que asume que el ID es siempre de 6 caracteres.
+        const roomId = window.location.href.slice(-6);
+        state.getRoomInfo(roomId); 
         
         // 2. Suscribimos el componente al State Manager
-        // Esto le dice al state: "Cada vez que cambies, llama a this.render()"
-        this.unsubscribe = state.subscribe(() => {
+        this.unsubscribe = state.subscribe((currentState) => {
+            
+            // 💡 LÓGICA DE NAVEGACIÓN A RESULTADOS
+            // Cuando el estado de la ronda cambia a "show results" (o el que use tu backend para el fin de ronda)
+            if (currentState.roundStatus === "show results" && roomId) {
+                // Navegamos al componente de resultados. Este componente se encargará de mostrar el score y la historia.
+                Router.go(`/room/${roomId}/results`); 
+                return; // Detenemos la re-renderización aquí, ya que vamos a navegar.
+            }
+            
             this.render(); // re-renderización
         });
 
@@ -25,7 +35,7 @@ class GameRoom extends HTMLElement{
     }
 
     disconnectedCallback() {
-        // Al salir del DOM, cancelamos la suscripción para evitar escapes de memoria
+        // Al salir del DOM, cancelamos la suscripción
         if (this.unsubscribe) {
             this.unsubscribe();
         }
@@ -34,12 +44,6 @@ class GameRoom extends HTMLElement{
     handleReadyClick = () => {
         const roomId = window.location.href.slice(-6);
         state.setPlayerReady(true, roomId);
-    }
-
-    handleNewRoundClick = () => {
-        const roomId = window.location.href.slice(-6);
-        // Llama al State Manager para iniciar el flujo de reseteo
-        state.resetRoom(roomId); 
     }
 
     async render(){
@@ -66,64 +70,21 @@ class GameRoom extends HTMLElement{
         const container = document.createElement('div');
         container.classList.add('welcome__container');
         
-        // 3. Renderizado Condicional por Estado de Ronda
+        // 3. Renderizado Condicional simplificado (SOLO JUEGO Y ESPERA)
 
-        // ESTADO A: VISTA DE RESULTADOS (Highest Priority)
-        if (currentState.roundStatus === "show results"){
-            const scoreMessage = currentState.roundScore || "EMPATE"; // Usar 'empate' si no hay score
-            
-            // Creamos los elementos de resultado
-            const starEl = document.createElement('star-result');
-            starEl.setAttribute('score', scoreMessage.toLowerCase());
-
-            const newRoundBtn = document.createElement('button'); // Usamos un button simple
-            newRoundBtn.id = 'new-round';
-            newRoundBtn.textContent = 'Nueva ronda';
-            
-            const localMessageP = document.createElement('p');
-            localMessageP.id = 'local-message';
-            localMessageP.textContent = currentState.localMessage || "";
-
-
-            // Estructura de resultados
-            container.innerHTML = `
-                <div>
-                    <div class="history">
-                        <p>${thisUser}: 0</p>
-                        <p>${otherUser}: 0</p>
-                    </div>
-                </div>
-            `;
-            
-            // 💡 Agregamos los componentes Custom
-            container.children[0].prepend(starEl);
-            container.children[0].appendChild(newRoundBtn);
-            container.children[0].appendChild(localMessageP);
-
-
-            // Lógica del botón de reseteo
-            if (currentState.localMessage?.includes("Esperando reinicio")) {
-                newRoundBtn.style.display = 'none';
-                localMessageP.style.display = 'inherit';
-            } else {
-                newRoundBtn.style.display = 'inherit';
-                localMessageP.style.display = 'none';
-            }
-            
-            newRoundBtn.addEventListener('click', this.handleNewRoundClick);
-
-        } 
-        
-        // ESTADO B: VISTA DE JUEGO (waiting selections/Contador)
-        else if (currentState.roundStatus === "waiting selections") {
+        // ESTADO A: VISTA DE JUEGO (waiting selections/Contador)
+        if (currentState.roundStatus === "waiting selections") {
 
             if(currentState.play.player1.isReady && currentState.play.player2!.isReady){
 
                 if(currentState.isCounting === false) { 
                     container.innerHTML = `
-                        
+                        <h2>Esperando jugada de ${otherUser}</h2>
+                        <div class='selection__container'>
+                            <selection-el image="${currentState.play.player1.choice || 'tijeras'}"></selection-el>
+                        </div>
                     `;
-                    return; // Salimos de la función render para mostrar solo este mensaje.
+                    return; // Salimos de la función render.
                 }
 
                 // VISTA CONTADOR
@@ -141,22 +102,20 @@ class GameRoom extends HTMLElement{
                 let lastSelectedMove = "";
 
                 const handleSelection = (e: any) => {
-                    const selectedMove = e.detail.selection; // Obtenemos el detail.selection
-
-                    allSelections.forEach((element) => { // Por cada elemento de allSelections
-                        const image = element.shadowRoot?.querySelector("img"); // Obtenemos el shadow y la imagen
-
-                        if (!image) return; // Si la imagen no es true, se termina la funcion
-                        image.style.transform = "scale(1)"; // Le damos estilos a todas las imagenes
+                    const selectedMove = e.detail.selection; 
+                    allSelections.forEach((element) => { 
+                        const image = element.shadowRoot?.querySelector("img"); 
+                        if (!image) return; 
+                        image.style.transform = "scale(1)"; 
                         image.style.opacity = "0.5";
 
-                        if (element.getAttribute("image") === selectedMove) { // Y a la imagen seleccionada le hacemos un estilo diferente
+                        if (element.getAttribute("image") === selectedMove) { 
                             image.style.transform = "scale(1.5)";
                             image.style.opacity = "1";
                         }
                     });
 
-                    lastSelectedMove = selectedMove; // Establecemos el lastSelectedMove con el valor de selectedMove
+                    lastSelectedMove = selectedMove; 
                 };
 
                 container.addEventListener("selection-info", handleSelection);
@@ -194,7 +153,7 @@ class GameRoom extends HTMLElement{
             }
         }
         
-        // ESTADO C: VISTA INICIAL / ESPERA (waiting player 2)
+        // ESTADO B: VISTA INICIAL / ESPERA (initial / waiting player 2)
         else {
             container.innerHTML = `
                 <h2>${currentState.roundStatus}</h2>
@@ -208,7 +167,8 @@ class GameRoom extends HTMLElement{
                 `;
         }
 
-        const style = document.createElement('style')
+        // 4. Estilos
+        const style = document.createElement('style');
 
         style.innerHTML = `
             .welcome__container{
@@ -266,9 +226,27 @@ class GameRoom extends HTMLElement{
             #local-message{
                 display: none;
             }
+
+            #this-choice{
+                position: absolute;
+                bottom: -20px;
+                width: 300px;
+                height: 400px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            #opponent-choice{
+                position: absolute;
+                top: -20px;
+                width: 300px;
+                height: 400px;
+                left: 50%;
+                transform: translateX(-50%) rotate(180deg);
+            }
         `
 
-        this.shadow.innerHTML = ''; // Limpiar el shadow DOM antes de redibujar
+        this.shadow.innerHTML = ''; 
         this.shadow.appendChild(container);
         this.shadow.appendChild(style);
     }

@@ -7,4 +7,5 @@ router.setRoutes([
     {path: '/register', component: 'auth-page'},
     {path: '/game', component: 'new-game'},
     {path: '/room/:roomId', component: 'game-room'},
+    {path: '/room/:roomId/results', component: 'results-page'},
 ]);
