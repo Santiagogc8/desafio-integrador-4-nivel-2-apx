@@ -215,6 +215,21 @@ class ResultsPage extends HTMLElement {
             return
         }
 
+        if(currentState.play.player1?.choice === "invalid" || currentState.play.player2?.choice === "invalid"){
+            this.innerHTML = `
+                <div class="results-container" style="display: flex;">
+                    <h2 style="font-size: 20px; text-align: center;">Un jugador se ha olvidado de jugar. Ronda invalida</h2>
+                    <button class="play-again">¡Volver a jugar!</button>
+                </div>
+            `
+            this.appendChild(style);
+
+            const playAgainButton = this.querySelector('.play-again');
+            playAgainButton?.addEventListener('click', this.handlePlayAgain);
+
+            return
+        }
+
         // 3. Caso: Mostrar resultados normales (ningún jugador ha solicitado reinicio aún).
         this.innerHTML = `
                 <selection-el class="this-player" image=${currentState.play.player1?.choice}></selection-el>

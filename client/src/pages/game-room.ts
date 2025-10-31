@@ -105,7 +105,7 @@ class GameRoom extends HTMLElement{
 
                 // Lógica de Listeners del Contador
                 const allSelections = container.querySelectorAll("selection-el");
-                let lastSelectedMove = "";
+                let lastSelectedMove = "invalid";
 
                 const handleSelection = (e: any) => {
                     const selectedMove = e.detail.selection; 
@@ -135,7 +135,7 @@ class GameRoom extends HTMLElement{
 
                     state.sendPlay(roomId, lastSelectedMove);
                     container.removeEventListener("selection-info", handleSelection);
-                    state.setState({isCounting: false})
+                    state.setState({isCounting: false});
                 });
             }            
             // Si no están listos (la vista por defecto)

@@ -10,6 +10,7 @@ interface StateData {
             isReady: boolean;
             choice: string;
             restartRequested: boolean;
+            online: boolean; // <--- AGREGAR
         } | null;
         player2: {
             username: string;
@@ -17,6 +18,7 @@ interface StateData {
             isReady: boolean;
             choice: string;
             restartRequested: boolean;
+            online: boolean; // <--- AGREGAR
         } | null;
     };
     // 💡 Propiedad que faltaba en la definición inicial
@@ -26,6 +28,7 @@ interface StateData {
     synced: boolean; // flag para control de carga
     isCounting: boolean;
     isLocalUserRTDB_P1: boolean | null;
+    playerOnlineRegistered: boolean;
 }
 
 const state = { // Creamos nuestro state
@@ -38,6 +41,7 @@ const state = { // Creamos nuestro state
         synced: false, // Inicializamos en false
         isCounting: true,
         isLocalUserRTDB_P1: null,
+        playerOnlineRegistered: false,
     } as StateData, 
     listeners: [] as any[], // Creamos el array de listeners
     initLocalStorage(){ // Creamos un metodo que inicializara el localStorage
@@ -232,8 +236,9 @@ const state = { // Creamos nuestro state
         const response = await fetch(API_BASE_URL + `/rooms/${roomId}`); // Hacemos un get a la room con la roomId recibida
 
         const rtdbRes = await response.json(); // Esperamos la respuesta y la hacemos un json
+        const rtdbRoomId = rtdbRes.rtdbRoomId;
 
-        const rtdbRoomRef = ref(rtdb, `/rooms/${rtdbRes.rtdbRoomId}`); // Obtenemos la referencia en la ruta con el id largo
+        const rtdbRoomRef = ref(rtdb, `/rooms/${rtdbRoomId}`); // Obtenemos la referencia en la ruta con el id largo
 
         onValue(rtdbRoomRef, (snapshot) => {
             if (snapshot.exists()) {
@@ -252,6 +257,15 @@ const state = { // Creamos nuestro state
                 // Mapeo de datos: El usuario local siempre es P1 para la UI, el oponente siempre es P2
                 const localPlayerData = isLocalUserP1_inDB ? roomData.player1 : roomData.player2;
                 const opponentData = isLocalUserP1_inDB ? roomData.player2 : roomData.player1;
+
+                if (!currentState.playerOnlineRegistered) {
+                    const playerKey = isLocalUserP1_inDB ? 'player1' : 'player2';
+                    
+                    // Genera la ruta específica para el OBJETO del jugador en la RTDB
+                    const rtdbPlayerPath = `/rooms/${rtdbRoomId}/${playerKey}`; 
+                    this.setPlayerOnline(rtdbPlayerPath);
+                    this.setState({ playerOnlineRegistered: true }); // Marca como registrado
+                }
 
                 // Mantenemos al player1 local y actualizamos al oponente y el status
                 this.setState({
@@ -281,16 +295,13 @@ const state = { // Creamos nuestro state
         const playerOnlineRef = ref(rtdb, rtdbPlayerPath);
 
         // 1. Decirle a Firebase: "Si mi conexión se cae, establece esta referencia a 'false'"
-        onDisconnect(playerOnlineRef).set(false)
+        onDisconnect(playerOnlineRef).remove() // <--- ¡CAMBIO CLAVE: remove() en lugar de set()!
             .then(() => {
-                // 2. Establecer el estado actual como CONECTADO (true)
-                // Esto solo se ejecuta si onDisconnect se registró correctamente.
-                set(playerOnlineRef, true);
-                
-                console.log("Presencia registrada. Jugador en línea.");
+                // Ya no es necesario setear un estado 'true', el jugador ya existe.
+                console.log("Promesa de autodestrucción por desconexión registrada.");
             })
             .catch(error => {
-                console.error("Error al registrar la presencia:", error);
+                console.error("Error al registrar la promesa de desconexión:", error);
             });
     },
     async setPlayerReady(isReadyStatus: boolean, roomId: string){
@@ -372,6 +383,8 @@ const state = { // Creamos nuestro state
 
         if(res.ok){
             let roundScore;
+            console.log(response)
+            console.log('EL GANADOR ES: ' + response.winner)
 
             if(response.winner === 'tie'){
                 roundScore = 'empate';

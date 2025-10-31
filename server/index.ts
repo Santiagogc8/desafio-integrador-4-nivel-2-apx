@@ -221,7 +221,9 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                 return res.status(400).json({error: "userId not valid"}); // enviamos un error
             }
 
-            const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val(); // Obtenemos la data actualizada del roomRef y accedemos a su valor
+            await new Promise(resolve => setTimeout(resolve, 50)); // <--- LÍNEA AGREGADA
+
+            const updatedRoomData = (await rtdb.ref('/rooms/'+rtdbRoomId).get()).val();
 
             const player1Choice = updatedRoomData.player1?.choice; // Protege la elección de P1
             const player2Choice = updatedRoomData.player2?.choice;
@@ -330,7 +332,7 @@ app.patch('/rooms/:roomId/play', async (req, res) =>{
                         }
                         
                         // Aplicar las actualizaciones en la transacción
-                        transaction.update(roomDocRef, updates);
+                        await transaction.update(roomDocRef, updates);
                     });
                     
                     return res.json({winner: winner});
