@@ -38,6 +38,6 @@ Puedes probar la aplicación desplegada a través del siguiente enlace:
 ## 📝 Documentación de la API
 
 ---
-### **Link de Uso de API**
+### **Link de Uso de API:** [https://documenter.getpostman.com/view/48981749/2sB3WpQLLH](https://documenter.getpostman.com/view/48981749/2sB3WpQLLH)
 
 ---
