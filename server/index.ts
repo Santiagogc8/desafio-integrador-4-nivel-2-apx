@@ -1,6 +1,6 @@
 import express from 'express'; // Hacemos la importacion de express
 const path = require('path'); // Importacion de path (para rutas relativas y el staticServer)
-import { firestore, rtdb, FieldValue } from './database'; // Firestore y rtdb para obtener las databases
+import { firestore, rtdb } from './database'; // Firestore y rtdb para obtener las databases
 import { v4 as uuidv4 } from 'uuid'; // v4 de uuid para obtener ids alfanumericos aleatorios
 import cors from 'cors'; // Cors para conexiones mas sencillas
 import { nanoid } from 'nanoid'; // E importamos nanoid para crear keys aleatorios a las referencias de la rtdb
@@ -385,7 +385,7 @@ app.patch('/rooms/:roomId/reset', async (req, res)=>{
         playerKey = 'player2';
         opponentKey = 'player1';
     } else {
-        // 💡 IMPORTANTE: Si el usuario existe pero no es P1 ni P2, error
+        // Si el usuario existe pero no es P1 ni P2, error
         return res.status(403).json({ error: "User is not a participant in this room." });
     }
 
@@ -400,7 +400,7 @@ app.patch('/rooms/:roomId/reset', async (req, res)=>{
     // 4. Lógica de Ejecución
     if (updatedRoomData[playerKey].restartRequested && updatedRoomData[opponentKey].restartRequested) {
         
-        // 💡 Ejecutar el reseteo completo solo si AMBOS están listos
+        // Ejecutar el reseteo completo solo si AMBOS están listos
         await rtdb.ref('/rooms/'+rtdbRoomId).update({
             roundStatus: 'waiting selections', 
             'player1/choice': null, 
