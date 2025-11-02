@@ -339,7 +339,6 @@ const state = { // Creamos nuestro state
             await update(rtdbRef, { // Intentamos hnacer el update en la rtdbRef
                 [updatePath]: isReadyStatus // [updatePath] permite usar la variable como clave, es decir, ${playerKey}/isReady
             });
-            console.log(`Estado de Ready actualizado a ${isReadyStatus}`);
         } catch (error) {
             console.error("Error al actualizar el estado de Ready:", error);
         }
@@ -382,8 +381,6 @@ const state = { // Creamos nuestro state
 
         if(res.ok){
             let roundScore;
-            console.log(response)
-            console.log('EL GANADOR ES: ' + response.winner)
 
             if(response.winner === 'tie'){
                 roundScore = 'empate';
@@ -479,7 +476,7 @@ const state = { // Creamos nuestro state
                     isCounting: true 
                 }); // Limpiamos el mensaje
             } else {
-                // 💡 Si el reseteo NO se ejecutó, mostramos el mensaje localmente
+                // Si el reseteo NO se ejecutó, mostramos el mensaje localmente
                 this.setState({ 
                     roundScore: null, 
                     localMessage: "Esperando reinicio del otro jugador",
