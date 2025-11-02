@@ -10,7 +10,7 @@ interface StateData {
             isReady: boolean;
             choice: string;
             restartRequested: boolean;
-            online: boolean; // <--- AGREGAR
+            online: boolean;
         } | null;
         player2: {
             username: string;
@@ -18,10 +18,9 @@ interface StateData {
             isReady: boolean;
             choice: string;
             restartRequested: boolean;
-            online: boolean; // <--- AGREGAR
+            online: boolean;
         } | null;
     };
-    // 💡 Propiedad que faltaba en la definición inicial
     roundStatus: string;
     roundScore: string | null;
     localMessage: string;
@@ -251,7 +250,7 @@ const state = { // Creamos nuestro state
                 // Si el ID de la DB no existe, hay un error de sincronización, salimos.
                 if (!localUserId) return; 
 
-                // 💡 Determinación del rol en la RTDB
+                // Determinación del rol en la RTDB
                 const isLocalUserP1_inDB = roomData.player1.userId === localUserId;
                 
                 // Mapeo de datos: El usuario local siempre es P1 para la UI, el oponente siempre es P2
@@ -350,14 +349,14 @@ const state = { // Creamos nuestro state
         const userId = currentState.play.player1?.userId;
         const username = currentState.play.player1?.username;
 
-        // 💡 1. GUARDIA DE ESTADO: Si ya tenemos una jugada registrada Y no estamos contando, abortar.
+        // 1. GUARDIA DE ESTADO: Si ya tenemos una jugada registrada Y no estamos contando, abortar.
         // Esto evita re-envíos si el servidor se toma su tiempo para actualizar la RTDB.
         if (currentState.play.player1?.choice && currentState.isCounting === false) {
             console.error("Intento de enviar la jugada duplicado. Abortando.");
             return; 
         }
         
-        // 💡 2. ACTUALIZACIÓN LOCAL INMEDIATA: Cambiar el estado ANTES de la llamada a la red.
+        // 2. ACTUALIZACIÓN LOCAL INMEDIATA: Cambiar el estado ANTES de la llamada a la red.
         // Esto asegura que el componente GameRoom se re-renderice inmediatamente sin el contador.
         this.setState({
             play: {
@@ -440,7 +439,7 @@ const state = { // Creamos nuestro state
             }
 
             this.setState({
-                globalScore: mappedScore, // 💡 Guardamos el score MAPEADO
+                globalScore: mappedScore, // Guardamos el score MAPEADO
                 history: data.history,
                 synced: true,
             });
@@ -484,7 +483,7 @@ const state = { // Creamos nuestro state
                 this.setState({ 
                     roundScore: null, 
                     localMessage: "Esperando reinicio del otro jugador",
-                    isCounting: true // <-- FIX: Esto asegura que la bandera local se resetee incluso si se está esperando al oponente.
+                    isCounting: true
                 }); 
             }
         } else{
